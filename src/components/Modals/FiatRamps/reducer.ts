@@ -7,26 +7,6 @@ import { isSupportedBitcoinAsset, parseGemBuyAssets, parseGemSellAssets } from '
 
 export const reducer = (state: GemManagerState, action: Record<any, any>) => {
   switch (action.type) {
-    case GemManagerAction.FETCH_STARTED:
-      return {
-        ...state,
-        loading: true
-      }
-    case GemManagerAction.FETCH_COMPLETED:
-      return {
-        ...state,
-        loading: false
-      }
-    case GemManagerAction.SELECT_ASSET:
-      return {
-        ...state,
-        selectedAsset: action.selectedAsset
-      }
-    case GemManagerAction.SHOW_ON_DISPLAY:
-      return {
-        ...state,
-        shownOnDisplay: action.shownOnDisplay
-      }
     case GemManagerAction.SET_ETH_ADDRESS:
       return {
         ...state,
@@ -51,43 +31,6 @@ export const reducer = (state: GemManagerState, action: Record<any, any>) => {
         ...state,
         supportsAddressVerifying
       }
-    case GemManagerAction.SET_COINIFY_ASSETS:
-      return {
-        ...state,
-        coinifyAssets: action.coinifyAssets
-      }
-    case GemManagerAction.SET_WYRE_ASSETS:
-      return {
-        ...state,
-        wyreAssets: action.wyreAssets
-      }
-    case GemManagerAction.SET_BUY_LIST:
-      const buyList = parseGemBuyAssets(
-        state.coinifyAssets,
-        state.wyreAssets,
-        action.balances,
-        state.btcAddress
-      )
-
-      if (!buyList.length) return state
-
-      return {
-        ...state,
-        buyList
-      }
-    case GemManagerAction.SET_SELL_LIST:
-      const sellList = parseGemSellAssets(
-        state.coinifyAssets,
-        state.wyreAssets,
-        action.balances,
-        state.btcAddress
-      )
-      if (!sellList.length) return state
-
-      return {
-        ...state,
-        sellList
-      }
     case GemManagerAction.SET_FIAT_RAMP_ACTION:
       return {
         ...state,
@@ -110,6 +53,7 @@ export const reducer = (state: GemManagerState, action: Record<any, any>) => {
         isBTC: isBTC
       }
     default:
+      console.log({ action, state })
       throw new Error('Todo')
   }
 }

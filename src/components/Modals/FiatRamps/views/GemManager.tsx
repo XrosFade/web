@@ -1,4 +1,4 @@
-import { ArrowBackIcon, CheckIcon, ChevronRightIcon, CopyIcon, ViewIcon } from '@chakra-ui/icons'
+import { CheckIcon, ChevronRightIcon, CopyIcon, ViewIcon } from '@chakra-ui/icons'
 import {
   Box,
   Button,
@@ -7,16 +7,14 @@ import {
   Input,
   InputGroup,
   InputRightElement,
-  Spacer,
-  Stack,
   Text as RawText,
   useToast
 } from '@chakra-ui/react'
 import { supportsBTC } from '@shapeshiftoss/hdwallet-core'
 import { ChainTypes, UtxoAccountType } from '@shapeshiftoss/types'
-import { useEffect, useMemo, useReducer, useState } from 'react'
+import { useEffect, useMemo, useReducer } from 'react'
 import { useTranslate } from 'react-polyglot'
-import { useSelector } from 'react-redux'
+import { useHistory, useLocation } from 'react-router'
 import { AssetIcon } from 'components/AssetIcon'
 import { SlideTransition } from 'components/SlideTransition'
 import { Text } from 'components/Text'
@@ -24,32 +22,35 @@ import { useChainAdapters } from 'context/ChainAdaptersProvider/ChainAdaptersPro
 import { useModal } from 'context/ModalProvider/ModalProvider'
 import { useWallet } from 'context/WalletProvider/WalletProvider'
 import { ensReverseLookup } from 'lib/ens'
-import { selectPortfolioCryptoMixedBalancesBySymbol } from 'state/slices/selectors'
 
-import { AssetSearch } from '../components/AssetSearch/AssetSearch'
 import { FiatRampActionButtons } from '../components/FiatRampActionButtons'
 import { BTC_SEGWIT_NATIVE_BIP44, FiatRampAction, GemManagerAction } from '../const'
 import { GemCurrency } from '../FiatRamps'
 import { reducer } from '../reducer'
 import { initialState } from '../state'
-import {
-  fetchCoinifySupportedCurrencies,
-  fetchWyreSupportedCurrencies,
-  getAssetLogoUrl,
-  makeGemPartnerUrl,
-  middleEllipsis
-} from '../utils'
+import { getAssetLogoUrl, makeGemPartnerUrl, middleEllipsis } from '../utils'
 
 export const GemManager = () => {
   const translate = useTranslate()
+  const history = useHistory()
+  const location = useLocation()
+  console.log({ location })
   const toast = useToast()
   const { fiatRamps } = useModal()
 
   const [state, dispatch] = useReducer(reducer, initialState)
-  const [isSelectingAsset, setIsSelectingAsset] = useState(false)
+  const setIsSelectingAsset = () => {
+    const route = state.fiatRampAction === FiatRampAction.Buy ? '/buy/select' : '/sell/select'
+    history.push(route, {
+      selectAssetTranslation,
+      setIsSelectingAsset,
+      onAssetSelect
+    })
+  }
 
-  const setFiatRampAction = (fiatRampAction: FiatRampAction) =>
-    dispatch({ type: GemManagerAction.SET_FIAT_RAMP_ACTION, fiatRampAction })
+  const setFiatRampAction = (fiatRampAction: FiatRampAction) => {
+    return dispatch({ type: GemManagerAction.SET_FIAT_RAMP_ACTION, fiatRampAction })
+  }
 
   const {
     state: { wallet }
@@ -72,8 +73,6 @@ export const GemManager = () => {
       dispatch({ type: GemManagerAction.SET_SUPPORTS_ADDRESS_VERIFYING, wallet })
     })()
   }, [wallet])
-
-  const balances = useSelector(selectPortfolioCryptoMixedBalancesBySymbol)
 
   useEffect(() => {
     ;(async () => {
@@ -114,61 +113,22 @@ export const GemManager = () => {
   ])
 
   useEffect(() => {
-    ;(async () => {
-      dispatch({ type: GemManagerAction.FETCH_STARTED })
+    if (location.state?.selectedAsset?.ticker) {
+      dispatch({
+        type: GemManagerAction.SET_IS_BTC,
+        assetTicker: location.state.selectedAsset?.ticker,
+        btcAddress: state.btcAddress
+      })
 
-      try {
-        if (!state.coinifyAssets.length) {
-          const coinifyAssets = await fetchCoinifySupportedCurrencies()
-          dispatch({ type: GemManagerAction.SET_COINIFY_ASSETS, coinifyAssets })
-        }
-        if (!state.wyreAssets.length) {
-          const wyreAssets = await fetchWyreSupportedCurrencies()
-          dispatch({ type: GemManagerAction.SET_WYRE_ASSETS, wyreAssets })
-        }
+      const chainAdapter =
+        wallet && state.isBTC && supportsBTC(wallet) ? btcChainAdapter : ethChainAdapter
 
-        dispatch(
-          state.fiatRampAction === FiatRampAction.Buy
-            ? { type: GemManagerAction.SET_BUY_LIST }
-            : { type: GemManagerAction.SET_SELL_LIST, balances }
-        )
-        dispatch({ type: GemManagerAction.FETCH_COMPLETED })
-      } catch (e) {
-        console.error(e)
-        dispatch({ type: GemManagerAction.FETCH_COMPLETED })
-      }
-    })()
-    // We use balances but do not need to actually need to react on it in this hook
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.fiatRampAction, state.btcAddress, state.coinifyAssets, state.wyreAssets])
-
-  useEffect(
-    () => dispatch({ type: GemManagerAction.SELECT_ASSET, selectedAsset: null }),
-    [state.fiatRampAction]
-  )
-
-  useEffect(() => {
-    dispatch({
-      type: GemManagerAction.SET_IS_BTC,
-      assetTicker: state.selectedAsset?.ticker,
-      btcAddress: state.btcAddress
-    })
-
-    const chainAdapter =
-      wallet && state.isBTC && supportsBTC(wallet) ? btcChainAdapter : ethChainAdapter
-
-    dispatch({
-      type: GemManagerAction.SET_CHAIN_ADAPTER,
-      chainAdapter: chainAdapter
-    })
-  }, [
-    btcChainAdapter,
-    ethChainAdapter,
-    wallet,
-    state.isBTC,
-    state.selectedAsset?.ticker,
-    state.btcAddress
-  ])
+      dispatch({
+        type: GemManagerAction.SET_CHAIN_ADAPTER,
+        chainAdapter: chainAdapter
+      })
+    }
+  }, [btcChainAdapter, ethChainAdapter, wallet, state.isBTC, state.btcAddress])
 
   const [selectAssetTranslation, assetTranslation, fundsTranslation] = useMemo(
     () =>
@@ -179,12 +139,13 @@ export const GemManager = () => {
   )
 
   const onAssetSelect = (data: GemCurrency) => {
-    setIsSelectingAsset(false)
-    dispatch({
-      type: GemManagerAction.SHOW_ON_DISPLAY,
+    const route = state.fiatRampAction === FiatRampAction.Buy ? '/buy' : '/sell'
+
+    history.push(route, {
+      selectedAsset: data,
+      // Reset shown on display status
       shownOnDisplay: null
     })
-    dispatch({ type: GemManagerAction.SELECT_ASSET, selectedAsset: data })
   }
 
   const handleCopyClick = async () => {
@@ -222,125 +183,97 @@ export const GemManager = () => {
       Boolean(deviceAddress) &&
       (deviceAddress === state.ethAddress || deviceAddress === state.btcAddress)
 
-    dispatch({
-      type: GemManagerAction.SHOW_ON_DISPLAY,
-      shownOnDisplay
-    })
+    console.log({ shownOnDisplay })
   }
 
   return (
     <SlideTransition>
-      <Box m={4} width={'24rem'}>
-        {isSelectingAsset ? (
-          <Stack>
-            <Flex>
-              <IconButton
-                icon={<ArrowBackIcon />}
-                aria-label={selectAssetTranslation}
-                size='sm'
-                onClick={() => setIsSelectingAsset(false)}
-                isRound
-                variant='ghost'
-                mr={2}
-              />
-              <Text alignSelf='center' translation={selectAssetTranslation} />
+      <Flex direction='column'>
+        <FiatRampActionButtons action={state.fiatRampAction} setAction={setFiatRampAction} />
+        <Text
+          translation={assetTranslation}
+          color='gray.500'
+          fontWeight='semibold'
+          mt='15px'
+          mb='8px'
+        />
+        <Button
+          width='full'
+          colorScheme='gray'
+          justifyContent='space-between'
+          height='70px'
+          onClick={() => setIsSelectingAsset()}
+          rightIcon={<ChevronRightIcon color='gray.500' boxSize={6} />}
+        >
+          {location?.state?.selectedAsset ? (
+            <Flex alignItems='center'>
+              <AssetIcon src={getAssetLogoUrl(location.state?.selectedAsset)} mr={4} />
+              <Box textAlign='left'>
+                <RawText lineHeight={1}>{location.state?.selectedAsset.name}</RawText>
+                <RawText fontWeight='normal' fontSize='sm' color='gray.500'>
+                  {location.state?.selectedAsset?.ticker}
+                </RawText>
+              </Box>
             </Flex>
-            <AssetSearch
-              onClick={onAssetSelect}
-              type={state.fiatRampAction}
-              assets={state.fiatRampAction === FiatRampAction.Buy ? state.buyList : state.sellList}
-              loading={state.loading}
-            />
-          </Stack>
-        ) : (
-          <Flex direction='column'>
-            <FiatRampActionButtons action={state.fiatRampAction} setAction={setFiatRampAction} />
-            <Text
-              translation={assetTranslation}
-              color='gray.500'
-              fontWeight='semibold'
-              mt='15px'
-              mb='8px'
-            />
-            <Button
-              width='full'
-              colorScheme='gray'
-              justifyContent='space-between'
-              height='70px'
-              onClick={() => setIsSelectingAsset(true)}
-              rightIcon={<ChevronRightIcon color='gray.500' boxSize={6} />}
-            >
-              {state.selectedAsset ? (
-                <Flex alignItems='center'>
-                  <AssetIcon src={getAssetLogoUrl(state.selectedAsset)} mr={4} />
-                  <Box textAlign='left'>
-                    <RawText lineHeight={1}>{state.selectedAsset.name}</RawText>
-                    <RawText fontWeight='normal' fontSize='sm' color='gray.500'>
-                      {state.selectedAsset?.ticker}
-                    </RawText>
-                  </Box>
-                </Flex>
-              ) : (
-                <Text translation={selectAssetTranslation} color='gray.500' />
-              )}
-            </Button>
-            {state.selectedAsset && (
-              <Flex flexDirection='column' mb='10px'>
-                <Text translation={fundsTranslation} color='gray.500' mt='15px' mb='8px'></Text>
-                <InputGroup size='md'>
-                  <Input pr='4.5rem' value={addressOrNameEllipsed} readOnly />
-                  <InputRightElement width={state.supportsAddressVerifying ? '4.5rem' : undefined}>
-                    <IconButton
-                      icon={<CopyIcon />}
-                      aria-label='copy-icon'
-                      size='sm'
-                      isRound
-                      variant='ghost'
-                      onClick={handleCopyClick}
-                    />
-                    {state.supportsAddressVerifying && (
-                      <IconButton
-                        icon={state.shownOnDisplay ? <CheckIcon /> : <ViewIcon />}
-                        onClick={handleVerify}
-                        aria-label='check-icon'
-                        size='sm'
-                        color={
-                          state.shownOnDisplay
-                            ? 'green.500'
-                            : state.shownOnDisplay === false
-                            ? 'red.500'
-                            : 'gray.500'
-                        }
-                        isRound
-                        variant='ghost'
-                      />
-                    )}
-                  </InputRightElement>
-                </InputGroup>
-              </Flex>
-            )}
-            <Button
-              width='full'
-              size='lg'
-              colorScheme='blue'
-              disabled={!state.selectedAsset}
-              as='a'
-              mt='25px'
-              href={makeGemPartnerUrl(
-                state.fiatRampAction,
-                state.selectedAsset?.ticker,
-                addressFull
-              )}
-              target='_blank'
-            >
-              <Text translation='common.continue' />
-            </Button>
-            <Button width='full' size='lg' variant='ghost' onClick={fiatRamps.close}>
-              <Text translation='common.cancel' />
-            </Button>
+          ) : (
+            <Text translation={selectAssetTranslation} color='gray.500' />
+          )}
+        </Button>
+        {location.state?.selectedAsset && (
+          <Flex flexDirection='column' mb='10px'>
+            <Text translation={fundsTranslation} color='gray.500' mt='15px' mb='8px'></Text>
+            <InputGroup size='md'>
+              <Input pr='4.5rem' value={addressOrNameEllipsed} readOnly />
+              <InputRightElement width={state.supportsAddressVerifying ? '4.5rem' : undefined}>
+                <IconButton
+                  icon={<CopyIcon />}
+                  aria-label='copy-icon'
+                  size='sm'
+                  isRound
+                  variant='ghost'
+                  onClick={handleCopyClick}
+                />
+                {state.supportsAddressVerifying && (
+                  <IconButton
+                    icon={state.shownOnDisplay ? <CheckIcon /> : <ViewIcon />}
+                    onClick={handleVerify}
+                    aria-label='check-icon'
+                    size='sm'
+                    color={
+                      state.shownOnDisplay
+                        ? 'green.500'
+                        : state.shownOnDisplay === false
+                        ? 'red.500'
+                        : 'gray.500'
+                    }
+                    isRound
+                    variant='ghost'
+                  />
+                )}
+              </InputRightElement>
+            </InputGroup>
           </Flex>
         )}
-      </Box>
+        <Button
+          width='full'
+          size='lg'
+          colorScheme='blue'
+          disabled={!location.state?.selectedAsset}
+          as='a'
+          mt='25px'
+          href={makeGemPartnerUrl(
+            state.fiatRampAction,
+            location.state?.selectedAsset?.ticker || '',
+            addressFull
+          )}
+          target='_blank'
+        >
+          <Text translation='common.continue' />
+        </Button>
+        <Button width='full' size='lg' variant='ghost' onClick={fiatRamps.close}>
+          <Text translation='common.cancel' />
+        </Button>
+      </Flex>
     </SlideTransition>
   )
 }
