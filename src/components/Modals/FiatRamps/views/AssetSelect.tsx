@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useHistory, useParams } from 'react-router'
 import { SlideTransition } from 'components/SlideTransition'
 import { Text } from 'components/Text'
-import { selectPortfolioCryptoMixedBalancesBySymbol } from 'state/slices/selectors'
+import { selectPortfolioMixedHumanBalancesBySymbol } from 'state/slices/selectors'
 import { useAppSelector } from 'state/store'
 
 import { AssetSearch } from '../components/AssetSearch/AssetSearch'
@@ -16,7 +16,12 @@ import {
   parseGemSellAssets
 } from '../utils'
 
-export const AssetSelect = ({ selectAssetTranslation, setIsSelectingAsset, onAssetSelect }) => {
+export const AssetSelect = ({
+  supportsBtc,
+  selectAssetTranslation,
+  setIsSelectingAsset,
+  onAssetSelect
+}) => {
   const history = useHistory()
   const { fiatRampAction } = useParams()
   const [buyList, setBuyList] = useState<any>([])
@@ -28,7 +33,7 @@ export const AssetSelect = ({ selectAssetTranslation, setIsSelectingAsset, onAss
     history.goBack()
   }
 
-  const balances = useAppSelector(selectPortfolioCryptoMixedBalancesBySymbol)
+  const balances = useAppSelector(selectPortfolioMixedHumanBalancesBySymbol)
 
   useEffect(() => {
     setLoading(true)
@@ -43,29 +48,19 @@ export const AssetSelect = ({ selectAssetTranslation, setIsSelectingAsset, onAss
       }
 
       if (coinifyAssets.length && wyreAssets.length) {
-        const buyList = parseGemBuyAssets(
-          coinifyAssets,
-          wyreAssets,
-          balances,
-          '' // TODO
-        )
+        const buyList = parseGemBuyAssets(supportsBtc, coinifyAssets, wyreAssets, balances)
 
         if (!buyList.length) return
         setBuyList(buyList)
 
-        const sellList = parseGemSellAssets(
-          coinifyAssets,
-          wyreAssets,
-          balances,
-          '' // TODO
-        )
+        const sellList = parseGemSellAssets(supportsBtc, coinifyAssets, wyreAssets, balances)
         if (!sellList.length) return
         setSellList(sellList)
 
         setLoading(false)
       }
     })()
-  }, [coinifyAssets, wyreAssets, balances])
+  }, [supportsBtc, coinifyAssets, wyreAssets, balances])
 
   return (
     <SlideTransition>

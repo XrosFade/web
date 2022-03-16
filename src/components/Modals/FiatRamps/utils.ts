@@ -22,8 +22,8 @@ type MixedPortfolioAssetBalances = {
 export const middleEllipsis = (address: string, cut: number) =>
   `${address.slice(0, cut)}...${address.slice(-1 * cut)}`
 
-export const isSupportedBitcoinAsset = (ticker: string | undefined) =>
-  Boolean(ticker && ticker === 'BTC')
+export const isSupportedBitcoinAsset = (assetId: string | undefined) =>
+  Boolean(assetId === 'bip122:000000000019d6689c085ae165831e93/slip44:0')
 
 export const getAssetLogoUrl = (asset: GemCurrency) => {
   return ASSET_LOGO_BASE_URI + asset.ticker.toLowerCase() + '.svg'
@@ -32,10 +32,10 @@ export const getAssetLogoUrl = (asset: GemCurrency) => {
 export const filterAssetsBySearchTerm = (search: string, assets: GemCurrency[]) => {
   if (!assets) return []
 
-  return matchSorter(assets, search, { keys: ['name', 'ticker'] })
+  return matchSorter(assets, search, { keys: ['name', 'assetId'] })
 }
 
-export const fetchCoinifySupportedCurrencies = async (): Promise<SupportedCurrency[]> => {
+export const fetchCoinifySupportedCurrencies = memoize(async (): Promise<SupportedCurrency[]> => {
   try {
     const { data } = await axios.get(getConfig().REACT_APP_GEM_COINIFY_SUPPORTED_COINS)
     return data
@@ -43,9 +43,9 @@ export const fetchCoinifySupportedCurrencies = async (): Promise<SupportedCurren
     console.error(e)
     return []
   }
-}
+})
 
-export const fetchWyreSupportedCurrencies = async (): Promise<SupportedCurrency[]> => {
+export const fetchWyreSupportedCurrencies = memoize(async (): Promise<SupportedCurrency[]> => {
   try {
     const { data } = await axios.get(getConfig().REACT_APP_GEM_WYRE_SUPPORTED_COINS)
     return data
@@ -53,7 +53,7 @@ export const fetchWyreSupportedCurrencies = async (): Promise<SupportedCurrency[
     console.error(e)
     return []
   }
-}
+})
 
 export const isBuyAsset = (currency: SupportedCurrency) =>
   currency.transaction_direction === TransactionDirection.BankToBlockchain ||
@@ -62,60 +62,68 @@ export const isBuyAsset = (currency: SupportedCurrency) =>
 export const isSellAsset = (currency: SupportedCurrency) =>
   currency.transaction_direction === TransactionDirection.BlockchainToBank
 
-export const parseGemSellAssets = (
-  coinifyAssets: SupportedCurrency[],
-  wyreAssets: SupportedCurrency[],
-  balances: MixedPortfolioAssetBalances,
-  btcAddress: string | null
-): GemCurrency[] =>
-  parseGemAssets(
-    coinifyAssets.filter(isSellAsset).map(coinifyList => coinifyList['source'].currencies),
-    wyreAssets.filter(isSellAsset).map(wyreList => wyreList['source'].currencies),
-    'source',
-    balances,
-    btcAddress
-  )
-
-export const parseGemBuyAssets = (
-  coinifyAssets: SupportedCurrency[],
-  wyreAssets: SupportedCurrency[],
-  balances: MixedPortfolioAssetBalances,
-  btcAddress: string | null
-): GemCurrency[] =>
-  parseGemAssets(
-    coinifyAssets.filter(isBuyAsset).map(coinifyList => coinifyList['destination'].currencies),
-    wyreAssets.filter(isBuyAsset).map(wyreList => wyreList['destination'].currencies),
-    'destination',
-    balances,
-    btcAddress
-  )
-
-const parseGemAssets = (
-  filteredCoinifyList: GemCurrency[][],
-  filteredWyreList: GemCurrency[][],
-  key: 'destination' | 'source',
-  balances: MixedPortfolioAssetBalances,
-  btcAddress: string | null
-): GemCurrency[] => {
-  const results = uniqBy(flatten(concat(filteredCoinifyList, filteredWyreList)), 'gem_asset_id')
-    .filter(asset => Boolean(adapters.gemAssetIdToCAIP19(asset.gem_asset_id)))
-    .map(asset => {
-      return {
-        ...asset,
-        disabled: isSupportedBitcoinAsset(asset?.ticker) && !btcAddress,
-        cryptoBalance: bnOrZero(balances?.[asset?.ticker]?.crypto),
-        fiatBalance: bnOrZero(balances?.[asset?.ticker]?.fiat)
-      }
-    })
-    .sort((a, b) =>
-      key === 'source' && (a.fiatBalance || b.fiatBalance)
-        ? b.fiatBalance.minus(a.fiatBalance).toNumber()
-        : a.name.localeCompare(b.name)
+export const parseGemSellAssets = memoize(
+  (
+    supportsBtc: boolean,
+    coinifyAssets: SupportedCurrency[],
+    wyreAssets: SupportedCurrency[],
+    balances: MixedPortfolioAssetBalances
+  ): GemCurrency[] =>
+    parseGemAssets(
+      'source',
+      supportsBtc,
+      coinifyAssets.filter(isSellAsset).map(coinifyList => coinifyList['source'].currencies),
+      wyreAssets.filter(isSellAsset).map(wyreList => wyreList['source'].currencies),
+      balances
     )
-  return results
-}
+)
 
-const memoizeResolver = (...args: any) => JSON.stringify(args)
+export const parseGemBuyAssets = memoize(
+  (
+    supportsBtc: boolean,
+    coinifyAssets: SupportedCurrency[],
+    wyreAssets: SupportedCurrency[],
+    balances: MixedPortfolioAssetBalances
+  ): GemCurrency[] =>
+    parseGemAssets(
+      'destination',
+      supportsBtc,
+      coinifyAssets.filter(isBuyAsset).map(coinifyList => coinifyList['destination'].currencies),
+      wyreAssets.filter(isBuyAsset).map(wyreList => wyreList['destination'].currencies),
+      balances
+    )
+)
+
+const parseGemAssets = memoize(
+  (
+    key: 'destination' | 'source',
+    supportsBtc: boolean,
+    filteredCoinifyList: GemCurrency[][],
+    filteredWyreList: GemCurrency[][],
+    balances: MixedPortfolioAssetBalances
+  ): GemCurrency[] => {
+    const results = uniqBy(flatten(concat(filteredCoinifyList, filteredWyreList)), 'gem_asset_id')
+      .filter(asset => Boolean(adapters.gemAssetIdToCAIP19(asset.gem_asset_id)))
+      .map(asset => {
+        const assetId = adapters.gemAssetIdToCAIP19(asset.gem_asset_id) || ''
+        return {
+          ...asset,
+          assetId,
+          disabled: isSupportedBitcoinAsset(assetId) && !supportsBtc,
+          cryptoBalance: bnOrZero(balances?.[assetId]?.crypto),
+          fiatBalance: bnOrZero(balances?.[assetId]?.fiat)
+        }
+      })
+      .sort((a, b) =>
+        key === 'source' && (a.fiatBalance.gt(0) || b.fiatBalance.gt(0))
+          ? b.fiatBalance.minus(a.fiatBalance).toNumber()
+          : a.name.localeCompare(b.name)
+      )
+    return results
+  }
+)
+
+const memoizeAllArgsResolver = (...args: any) => JSON.stringify(args)
 export const makeGemPartnerUrl = memoize(
   (intent: FiatRampAction, selectedAssetTicker: string | undefined, address: string) => {
     if (!selectedAssetTicker) return
@@ -139,5 +147,5 @@ export const makeGemPartnerUrl = memoize(
     })
     return `${GEM_URL}?${queryConfig}`
   },
-  memoizeResolver
+  memoizeAllArgsResolver
 )

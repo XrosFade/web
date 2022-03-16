@@ -3832,15 +3832,15 @@
     tsoa "^3.4.0"
     ws "^8.3.0"
 
-"@shapeshiftoss/caip@^2.0.0":
-  version "2.0.0"
-  resolved "https://registry.yarnpkg.com/@shapeshiftoss/caip/-/caip-2.0.0.tgz#6aba7a86eb0cb27576ae6d62dd9257e3d754d8a1"
-  integrity sha512-R3KpNrJFF4hibcZpBD81ANKJWmj5HuvYtVg59UVccUYWU3eNn5SNYkl+zukDvSnXcewwzJ0ukpcKHeSictpe6A==
+"@shapeshiftoss/caip@^2.0.0", "@shapeshiftoss/caip@^2.1.0":
+  version "2.1.0"
+  resolved "https://registry.yarnpkg.com/@shapeshiftoss/caip/-/caip-2.1.0.tgz#1a483beec633c824936ca26bc07ca9be15d2cdf2"
+  integrity sha512-XrsdnHGup+vtyY7mjhdm2ZGZQt25CKOQpjlIHlLIjm49vuXW3IG91O9puw5d2VWifE59S7HTLDO3O9S2HD1b6g==
 
-"@shapeshiftoss/chain-adapters@^2.4.1":
-  version "2.4.1"
-  resolved "https://registry.yarnpkg.com/@shapeshiftoss/chain-adapters/-/chain-adapters-2.4.1.tgz#97a77b061fac4b9fb7e19386647e0c9bfc5044fc"
-  integrity sha512-ngwryNKIsrKHHWZFqf3Oc9STSZlRXH7B6aWz1yrt37zwuhYSX5UE9XRcr9vmpRax9QuF313lpoyIMl6hpMxxfA==
+"@shapeshiftoss/chain-adapters@^2.4.3":
+  version "2.4.3"
+  resolved "https://registry.yarnpkg.com/@shapeshiftoss/chain-adapters/-/chain-adapters-2.4.3.tgz#7228ac9180073a28e3f1da1b082ece26abe46411"
+  integrity sha512-dFr5BAPh68Nd2eS7rtfSXMwYnPoGcz22BUBznK3nshyIkyt0npCANJ5Oa5jA4w7hMRpsrkjK6eMr/XSviCidcg==
   dependencies:
     axios "^0.26.0"
     bignumber.js "^9.0.1"

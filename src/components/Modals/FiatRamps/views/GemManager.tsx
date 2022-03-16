@@ -7,11 +7,13 @@ import {
   Input,
   InputGroup,
   InputRightElement,
+  Link,
+  Stack,
   Text as RawText,
   useToast
 } from '@chakra-ui/react'
 import { supportsBTC } from '@shapeshiftoss/hdwallet-core'
-import { ChainTypes, UtxoAccountType } from '@shapeshiftoss/types'
+import { ChainTypes } from '@shapeshiftoss/types'
 import { useEffect, useMemo, useReducer } from 'react'
 import { useTranslate } from 'react-polyglot'
 import { useHistory, useLocation } from 'react-router'
@@ -24,17 +26,19 @@ import { useWallet } from 'context/WalletProvider/WalletProvider'
 import { ensReverseLookup } from 'lib/ens'
 
 import { FiatRampActionButtons } from '../components/FiatRampActionButtons'
-import { BTC_SEGWIT_NATIVE_BIP44, FiatRampAction, GemManagerAction } from '../const'
+import { FiatRampAction, GemManagerAction } from '../const'
 import { GemCurrency } from '../FiatRamps'
 import { reducer } from '../reducer'
 import { initialState } from '../state'
 import { getAssetLogoUrl, makeGemPartnerUrl, middleEllipsis } from '../utils'
 
+type LocationProps = {
+  selectedAsset?: any
+}
 export const GemManager = () => {
   const translate = useTranslate()
   const history = useHistory()
-  const location = useLocation()
-  console.log({ location })
+  const location = useLocation<LocationProps>()
   const toast = useToast()
   const { fiatRamps } = useModal()
 
@@ -44,7 +48,8 @@ export const GemManager = () => {
     history.push(route, {
       selectAssetTranslation,
       setIsSelectingAsset,
-      onAssetSelect
+      onAssetSelect,
+      supportsBtc: wallet && supportsBTC(wallet)
     })
   }
 
@@ -75,44 +80,6 @@ export const GemManager = () => {
   }, [wallet])
 
   useEffect(() => {
-    ;(async () => {
-      if (!wallet) return
-      if (!state.ethAddress) {
-        const ethAddress = await ethChainAdapter.getAddress({
-          wallet
-        })
-        dispatch({ type: GemManagerAction.SET_ETH_ADDRESS, ethAddress })
-      }
-      if (wallet && !state.btcAddress) {
-        const btcAddress =
-          wallet && supportsBTC(wallet)
-            ? await btcChainAdapter.getAddress({
-                wallet,
-                accountType: UtxoAccountType.SegwitNative,
-                bip44Params: BTC_SEGWIT_NATIVE_BIP44
-              })
-            : ''
-        dispatch({ type: GemManagerAction.SET_BTC_ADDRESS, btcAddress })
-      }
-
-      if (state.ethAddress && !state.ensName) {
-        const reverseEthAddressLookup = await ensReverseLookup(state.ethAddress)
-        !reverseEthAddressLookup.error &&
-          dispatch({ type: GemManagerAction.SET_ENS_NAME, ensName: reverseEthAddressLookup.name })
-      }
-    })()
-  }, [
-    state.isBTC,
-    state.chainAdapter,
-    state.ensName,
-    state.ethAddress,
-    state.btcAddress,
-    wallet,
-    ethChainAdapter,
-    btcChainAdapter
-  ])
-
-  useEffect(() => {
     if (location.state?.selectedAsset?.ticker) {
       dispatch({
         type: GemManagerAction.SET_IS_BTC,
@@ -128,7 +95,41 @@ export const GemManager = () => {
         chainAdapter: chainAdapter
       })
     }
-  }, [btcChainAdapter, ethChainAdapter, wallet, state.isBTC, state.btcAddress])
+  }, [
+    location.state?.selectedAsset?.ticker,
+    btcChainAdapter,
+    ethChainAdapter,
+    wallet,
+    state.isBTC,
+    state.btcAddress
+  ])
+
+  useEffect(() => {
+    ;(async () => {
+      if (!wallet || !state.chainAdapter) return
+      if (!state.ethAddress && !state.isBTC) {
+        const ethAddress = await state.chainAdapter.getAddress({
+          wallet
+        })
+        dispatch({ type: GemManagerAction.SET_ETH_ADDRESS, ethAddress })
+      }
+      if (wallet && state.isBTC && !state.btcAddress) {
+        const btcAddress =
+          wallet && supportsBTC(wallet)
+            ? await state.chainAdapter.getAddress({
+                wallet
+              })
+            : ''
+        dispatch({ type: GemManagerAction.SET_BTC_ADDRESS, btcAddress })
+      }
+
+      if (state.ethAddress && !state.ensName) {
+        const reverseEthAddressLookup = await ensReverseLookup(state.ethAddress)
+        !reverseEthAddressLookup.error &&
+          dispatch({ type: GemManagerAction.SET_ENS_NAME, ensName: reverseEthAddressLookup.name })
+      }
+    })()
+  }, [state.isBTC, state.ensName, state.ethAddress, state.btcAddress, wallet, state.chainAdapter])
 
   const [selectAssetTranslation, assetTranslation, fundsTranslation] = useMemo(
     () =>
@@ -170,12 +171,6 @@ export const GemManager = () => {
     if (!wallet) return
     const deviceAddress = await state.chainAdapter.getAddress({
       wallet,
-      ...(state.isBTC
-        ? {
-            accountType: UtxoAccountType.SegwitNative,
-            bip44Params: BTC_SEGWIT_NATIVE_BIP44
-          }
-        : {}),
       showOnDevice: true
     })
 
@@ -183,7 +178,7 @@ export const GemManager = () => {
       Boolean(deviceAddress) &&
       (deviceAddress === state.ethAddress || deviceAddress === state.btcAddress)
 
-    console.log({ shownOnDisplay })
+    dispatch({ type: GemManagerAction.SET_SHOWN_ON_DISPLAY, shownOnDisplay })
   }
 
   return (
@@ -205,7 +200,7 @@ export const GemManager = () => {
           onClick={() => setIsSelectingAsset()}
           rightIcon={<ChevronRightIcon color='gray.500' boxSize={6} />}
         >
-          {location?.state?.selectedAsset ? (
+          {location.state?.selectedAsset ? (
             <Flex alignItems='center'>
               <AssetIcon src={getAssetLogoUrl(location.state?.selectedAsset)} mr={4} />
               <Box textAlign='left'>

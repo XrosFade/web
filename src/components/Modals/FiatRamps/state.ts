@@ -17,6 +17,7 @@ export type GemManagerState = {
   sellList: GemCurrency[]
   fiatRampAction: FiatRampAction
   isBTC: boolean
+  shownOnDisplay: boolean
 }
 
 export const initialState: GemManagerState = {
@@ -31,5 +32,6 @@ export const initialState: GemManagerState = {
   buyList: [],
   sellList: [],
   fiatRampAction: FiatRampAction.Buy,
-  isBTC: false
+  isBTC: false,
+  shownOnDisplay: false
 }
