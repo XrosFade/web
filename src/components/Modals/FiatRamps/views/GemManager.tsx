@@ -83,8 +83,7 @@ export const GemManager = () => {
     if (location.state?.selectedAsset?.ticker) {
       dispatch({
         type: GemManagerAction.SET_IS_BTC,
-        assetTicker: location.state.selectedAsset?.ticker,
-        btcAddress: state.btcAddress
+        assetId: location.state.selectedAsset?.assetId
       })
 
       const chainAdapter =
