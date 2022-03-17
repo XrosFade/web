@@ -13,13 +13,12 @@ export const GemManagerRoutes = (props: any) => {
   return (
     <AnimatePresence exitBeforeEnter initial={false}>
       <Switch location={location} key={location.key}>
-        <Route exact path='/buy'>
+        <Route exact path='/:fiatRampAction'>
           <GemManager {...props} />
         </Route>
         <Route exact path='/:fiatRampAction/select'>
           <AssetSelect {...location.state} />
         </Route>
-
         <Redirect from='/' to='/buy' />
       </Switch>
     </AnimatePresence>

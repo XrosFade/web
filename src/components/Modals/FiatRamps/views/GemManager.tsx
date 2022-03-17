@@ -7,8 +7,6 @@ import {
   Input,
   InputGroup,
   InputRightElement,
-  Link,
-  Stack,
   Text as RawText,
   useToast
 } from '@chakra-ui/react'
@@ -16,7 +14,7 @@ import { supportsBTC } from '@shapeshiftoss/hdwallet-core'
 import { ChainTypes } from '@shapeshiftoss/types'
 import { useEffect, useMemo, useReducer } from 'react'
 import { useTranslate } from 'react-polyglot'
-import { useHistory, useLocation } from 'react-router'
+import { useHistory, useLocation, useParams } from 'react-router'
 import { AssetIcon } from 'components/AssetIcon'
 import { SlideTransition } from 'components/SlideTransition'
 import { Text } from 'components/Text'
@@ -39,12 +37,13 @@ export const GemManager = () => {
   const translate = useTranslate()
   const history = useHistory()
   const location = useLocation<LocationProps>()
+  const { fiatRampAction } = useParams<{ fiatRampAction: FiatRampAction }>()
   const toast = useToast()
   const { fiatRamps } = useModal()
 
   const [state, dispatch] = useReducer(reducer, initialState)
   const setIsSelectingAsset = () => {
-    const route = state.fiatRampAction === FiatRampAction.Buy ? '/buy/select' : '/sell/select'
+    const route = fiatRampAction === FiatRampAction.Buy ? '/buy/select' : '/sell/select'
     history.push(route, {
       selectAssetTranslation,
       setIsSelectingAsset,
@@ -54,7 +53,8 @@ export const GemManager = () => {
   }
 
   const setFiatRampAction = (fiatRampAction: FiatRampAction) => {
-    return dispatch({ type: GemManagerAction.SET_FIAT_RAMP_ACTION, fiatRampAction })
+    const route = fiatRampAction === FiatRampAction.Buy ? '/buy/' : '/sell/'
+    history.push(route)
   }
 
   const {
@@ -112,10 +112,10 @@ export const GemManager = () => {
         })
         dispatch({ type: GemManagerAction.SET_ETH_ADDRESS, ethAddress })
       }
-      if (wallet && state.isBTC && !state.btcAddress) {
+      if (wallet && !state.btcAddress) {
         const btcAddress =
           wallet && supportsBTC(wallet)
-            ? await state.chainAdapter.getAddress({
+            ? await btcChainAdapter.getAddress({
                 wallet
               })
             : ''
@@ -132,14 +132,14 @@ export const GemManager = () => {
 
   const [selectAssetTranslation, assetTranslation, fundsTranslation] = useMemo(
     () =>
-      state.fiatRampAction === FiatRampAction.Buy
+      fiatRampAction === FiatRampAction.Buy
         ? ['fiatRamps.selectAnAssetToBuy', 'fiatRamps.assetToBuy', 'fiatRamps.fundsTo']
         : ['fiatRamps.selectAnAssetToSell', 'fiatRamps.assetToSell', 'fiatRamps.fundsFrom'],
-    [state.fiatRampAction]
+    [fiatRampAction]
   )
 
   const onAssetSelect = (data: GemCurrency) => {
-    const route = state.fiatRampAction === FiatRampAction.Buy ? '/buy' : '/sell'
+    const route = fiatRampAction === FiatRampAction.Buy ? '/buy' : '/sell'
 
     history.push(route, {
       selectedAsset: data,
@@ -183,7 +183,7 @@ export const GemManager = () => {
   return (
     <SlideTransition>
       <Flex direction='column'>
-        <FiatRampActionButtons action={state.fiatRampAction} setAction={setFiatRampAction} />
+        <FiatRampActionButtons action={fiatRampAction} setAction={setFiatRampAction} />
         <Text
           translation={assetTranslation}
           color='gray.500'
@@ -256,7 +256,7 @@ export const GemManager = () => {
           as='a'
           mt='25px'
           href={makeGemPartnerUrl(
-            state.fiatRampAction,
+            fiatRampAction,
             location.state?.selectedAsset?.ticker || '',
             addressFull
           )}
