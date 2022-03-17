@@ -119,7 +119,6 @@ const parseGemAssets = (
     )
   return results
 }
-
 const memoizeAllArgsResolver = (...args: any) => JSON.stringify(args)
 export const makeGemPartnerUrl = memoize(
   (intent: FiatRampAction, selectedAssetTicker: string | undefined, address: string) => {
