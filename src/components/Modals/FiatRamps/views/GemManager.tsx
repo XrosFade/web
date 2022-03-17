@@ -1,10 +1,12 @@
 import { Box } from '@chakra-ui/react'
+import { supportsBTC } from '@shapeshiftoss/hdwallet-core'
 import { ChainTypes } from '@shapeshiftoss/types'
 import { AnimatePresence } from 'framer-motion'
 import { useEffect, useState } from 'react'
 import { matchPath, MemoryRouter, Redirect, Route, Switch } from 'react-router'
 import { SlideTransition } from 'components/SlideTransition'
 import { useChainAdapters } from 'context/ChainAdaptersProvider/ChainAdaptersProvider'
+import { useWallet } from 'context/WalletProvider/WalletProvider'
 import { ensReverseLookup } from 'lib/ens'
 
 import { FiatRampAction, GemCurrency } from '../FiatRamps'
@@ -25,8 +27,33 @@ export const GemManagerRoutes = (props: any) => {
   const [ensName, setEnsName] = useState<string | null>()
 
   const chainAdapterManager = useChainAdapters()
-  const [chainType, setChainType] = useState<ChainTypes>(ChainTypes.Ethereum)
+  const ethereumChainAdapter = chainAdapterManager.byChain(ChainTypes.Ethereum)
+  const bitcoinChainAdapter = chainAdapterManager.byChain(ChainTypes.Bitcoin)
+
+  const [chainType, setChainType] = useState<ChainTypes.Bitcoin | ChainTypes.Ethereum>(
+    ChainTypes.Ethereum
+  )
   const chainAdapter = chainAdapterManager.byChain(chainType)
+
+  const {
+    state: { wallet }
+  } = useWallet()
+
+  useEffect(() => {
+    ;(async () => {
+      if (!wallet) return
+      const ethAddress = await ethereumChainAdapter.getAddress({
+        wallet
+      })
+      setEthAddress(ethAddress)
+      if (supportsBTC(wallet)) {
+        const btcAddress = await bitcoinChainAdapter.getAddress({
+          wallet
+        })
+        setBtcAddress(btcAddress)
+      }
+    })()
+  }, [wallet, bitcoinChainAdapter, ethereumChainAdapter])
 
   useEffect(() => {
     ;(async () => {
@@ -68,8 +95,6 @@ export const GemManagerRoutes = (props: any) => {
             onFiatRampActionClick={handleFiatRampActionClick}
             btcAddress={btcAddress}
             ethAddress={ethAddress}
-            setBtcAddress={setBtcAddress}
-            setEthAddress={setEthAddress}
             supportsAddressVerifying={supportsAddressVerifying}
             setSupportsAddressVerifying={setSupportsAddressVerifying}
             chainAdapter={chainAdapter}

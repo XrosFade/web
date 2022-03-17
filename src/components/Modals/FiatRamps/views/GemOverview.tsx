@@ -11,8 +11,6 @@ import {
   useToast
 } from '@chakra-ui/react'
 import { ChainAdapter } from '@shapeshiftoss/chain-adapters'
-import { ChainAdapter as BitcoinChainAdapter } from '@shapeshiftoss/chain-adapters/dist/bitcoin/BitcoinChainAdapter'
-import { ChainAdapter as EthereumChainAdapter } from '@shapeshiftoss/chain-adapters/dist/ethereum/EthereumChainAdapter'
 import { HDWallet, supportsBTC } from '@shapeshiftoss/hdwallet-core'
 import { ChainTypes } from '@shapeshiftoss/types'
 import { History } from 'history'
@@ -38,28 +36,24 @@ type GemOverviewProps = {
   ensName: string | null
   supportsAddressVerifying: boolean | null
   setSupportsAddressVerifying: (wallet: HDWallet) => boolean
-  setBtcAddress: (btcAddress: string) => void
-  setEthAddress: (ethAddress: string) => void
   onFiatRampActionClick: (fiatRampAction: FiatRampAction) => void
   onIsSelectingAsset: (supportsBTC: Boolean, selectAssetTranslation: string) => void
-  chainAdapter: ChainAdapter<ChainTypes>
   setChainType: (chainType: ChainTypes) => void
+  chainAdapter: ChainAdapter<ChainTypes.Bitcoin | ChainTypes.Ethereum>
 }
 export const GemOverview = ({
   history,
   onIsSelectingAsset,
   onFiatRampActionClick,
-  setBtcAddress,
-  setEthAddress,
   supportsAddressVerifying,
   setSupportsAddressVerifying,
   btcAddress,
   ethAddress,
   ensName,
   selectedAsset,
-  isBTC,
+  setChainType,
   chainAdapter,
-  setChainType
+  isBTC
 }: GemOverviewProps) => {
   const translate = useTranslate()
   const { fiatRampAction } = useParams<{ fiatRampAction: FiatRampAction }>()
@@ -78,35 +72,13 @@ export const GemOverview = ({
       : ensName || middleEllipsis(ethAddress || '', 11)
 
   useEffect(() => {
+    if (wallet && !supportsAddressVerifying) setSupportsAddressVerifying(wallet)
     const chainType =
       wallet && isBTC && supportsBTC(wallet) ? ChainTypes.Bitcoin : ChainTypes.Ethereum
     setChainType(chainType)
-    if (wallet && !supportsAddressVerifying) setSupportsAddressVerifying(wallet)
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wallet, isBTC])
-
-  useEffect(() => {
-    ;(async () => {
-      if (!wallet || !chainAdapter) return
-      if (!ethAddress && !isBTC && chainAdapter instanceof EthereumChainAdapter) {
-        const ethAddress = await chainAdapter.getAddress({
-          wallet
-        })
-        setEthAddress(ethAddress)
-      }
-      if (
-        wallet &&
-        supportsBTC(wallet) &&
-        !btcAddress &&
-        chainAdapter instanceof BitcoinChainAdapter
-      ) {
-        const btcAddress = await chainAdapter.getAddress({
-          wallet
-        })
-        setBtcAddress(btcAddress)
-      }
-    })()
-  }, [setEthAddress, setBtcAddress, isBTC, ensName, ethAddress, btcAddress, wallet, chainAdapter])
 
   const [selectAssetTranslation, assetTranslation, fundsTranslation] = useMemo(
     () =>
