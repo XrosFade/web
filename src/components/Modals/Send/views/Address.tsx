@@ -21,14 +21,12 @@ import { SlideTransition } from 'components/SlideTransition'
 import { Text } from 'components/Text'
 import { useChainAdapters } from 'context/ChainAdaptersProvider/ChainAdaptersProvider'
 import { useModal } from 'context/ModalProvider/ModalProvider'
-import { ensLookup, ensReverseLookup } from 'lib/ens'
 
 import { AddressInput } from '../AddressInput/AddressInput'
 import { SendFormFields, SendInput } from '../Form'
 import { SendRoutes } from '../Send'
 
 export const Address = () => {
-  const [isValidatingEnsName, setisValidatingEnsName] = useState(false)
   const history = useHistory()
   const translate = useTranslate()
   const {
@@ -83,26 +81,7 @@ export const Address = () => {
               validate: {
                 validateAddress: async (value: string) => {
                   const validAddress = await adapter.validateAddress(value)
-                  if (adapter instanceof EthereumChainAdapter) {
-                    const validEnsAddress = await adapter.validateEnsAddress(value)
-                    if (validEnsAddress.valid) {
-                      // Verify that the ENS name resolves to an address
-                      setisValidatingEnsName(true)
-                      const { error: isUnresolvableEnsName } = await ensLookup(value)
-                      if (isUnresolvableEnsName) {
-                        setisValidatingEnsName(false)
-                        return 'common.unresolvableEnsDomain'
-                      }
-                      // and add it to form state as a side effect
-                      setisValidatingEnsName(false)
-                      setValue(SendFormFields.EnsName, value)
-                      return true
-                    }
-                    // If a lookup exists for a 0x address, display ENS name instead
-                    const reverseValueLookup = await ensReverseLookup(value)
-                    !reverseValueLookup.error &&
-                      setValue(SendFormFields.EnsName, reverseValueLookup.name)
-                  }
+                  // TODO(gomes): check if there is any additional validation needed from the adapter validation
                   return validAddress.valid || 'common.invalidAddress'
                 }
               }
@@ -115,8 +94,7 @@ export const Address = () => {
           <Button
             isFullWidth
             isDisabled={!address || addressError}
-            isLoading={isValidatingEnsName}
-            colorScheme={addressError && !isValidatingEnsName ? 'red' : 'blue'}
+            colorScheme={addressError ? 'red' : 'blue'}
             size='lg'
             onClick={handleNext}
             data-test='send-address-next-button'

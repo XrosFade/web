@@ -1,6 +1,5 @@
-import { convertXpubVersion, toRootDerivationPath } from '@shapeshiftoss/chain-adapters'
-import { bip32ToAddressNList } from '@shapeshiftoss/hdwallet-core'
 import { chainAdapters, ChainTypes } from '@shapeshiftoss/types'
+import { FeeDataEstimate } from '@shapeshiftoss/types/dist/chain-adapters'
 import { debounce } from 'lodash'
 import { useCallback, useState } from 'react'
 import { useFormContext, useWatch } from 'react-hook-form'
@@ -10,8 +9,6 @@ import { SendRoutes } from 'components/Modals/Send/Send'
 import { useChainAdapters } from 'context/ChainAdaptersProvider/ChainAdaptersProvider'
 import { useWallet } from 'context/WalletProvider/WalletProvider'
 import { BigNumber, bn, bnOrZero } from 'lib/bignumber/bignumber'
-import { ensLookup } from 'lib/ens'
-import { isEthAddress } from 'lib/utils'
 import { accountIdToUtxoParams } from 'state/slices/portfolioSlice/utils'
 import {
   selectFeeAssetById,
@@ -96,51 +93,27 @@ export const useSendDetails = (): UseSendDetailsReturnType => {
 
     switch (values.asset.chain) {
       // TODO: Handle Cosmos ChainType here
-      case ChainTypes.Ethereum: {
-        const from = await adapter.getAddress({
-          wallet
-        })
-        const ethereumChainAdapter = chainAdapterManager.byChain(ChainTypes.Ethereum)
-        const to = isEthAddress(values.address)
-          ? values.address
-          : ((await ensLookup(values.address)).address as string)
-        return ethereumChainAdapter.getFeeData({
+      case ChainTypes.Cosmos: {
+        // TODO(gomes): wire up - do we need chainSpecific args?
+        // const from = await adapter.getAddress({
+        // wallet
+        // })
+        const cosmosChainAdapter = chainAdapterManager.byChain(ChainTypes.Cosmos)
+        const to = values.address
+        return cosmosChainAdapter.getFeeData({
           to,
           value,
-          chainSpecific: { from, contractAddress: values.asset.tokenId },
           sendMax: values.sendMax
         })
       }
-      case ChainTypes.Bitcoin: {
-        const { utxoParams, accountType } = accountIdToUtxoParams(asset, accountId, 0)
-        if (!utxoParams) throw new Error('useSendDetails: no utxoParams from accountIdToUtxoParams')
-        if (!accountType) {
-          throw new Error('useSendDetails: no accountType from accountIdToUtxoParams')
-        }
-        const { bip44Params, scriptType } = utxoParams
-        const pubkeys = await wallet.getPublicKeys([
-          {
-            coin: adapter.getType(),
-            addressNList: bip32ToAddressNList(toRootDerivationPath(bip44Params)),
-            curve: 'secp256k1',
-            scriptType
-          }
-        ])
-
-        if (!pubkeys?.[0]?.xpub) throw new Error('no pubkeys')
-        const pubkey = convertXpubVersion(pubkeys[0].xpub, accountType)
-        const bitcoinChainAdapter = chainAdapterManager.byChain(ChainTypes.Bitcoin)
-        return bitcoinChainAdapter.getFeeData({
-          to: values.address,
-          value,
-          chainSpecific: { pubkey },
-          sendMax: values.sendMax
-        })
+      case ChainTypes.Osmosis: {
+        // TODO
+        return {} as FeeDataEstimate<ChainTypes>
       }
       default:
         throw new Error('unsupported chain type')
     }
-  }, [accountId, adapter, asset, chainAdapterManager, getValues, wallet])
+  }, [chainAdapterManager, getValues, wallet])
 
   const handleNextClick = async () => {
     try {
@@ -179,60 +152,26 @@ export const useSendDetails = (): UseSendDetailsReturnType => {
       setLoading(true)
       const to = address
 
-      const { utxoParams, accountType } = accountIdToUtxoParams(asset, accountId, 0)
-      const from = await adapter.getAddress({
-        wallet,
-        accountType,
-        ...utxoParams
-      })
-
       // Assume fast fee for send max
       // This is used to make make sure its impossible to send more than our balance
       let fastFee: string = ''
       let adapterFees
       switch (chain) {
-        // TODO: Handle Cosmos ChainType here
-        case ChainTypes.Ethereum: {
-          const ethAdapter = chainAdapterManager.byChain(ChainTypes.Ethereum)
-          const contractAddress = tokenId
+        case ChainTypes.Cosmos: {
+          // TODO(gomes): wire up
+          const cosmosChainAdapter = chainAdapterManager.byChain(ChainTypes.Cosmos)
           const value = assetBalance
-          adapterFees = await ethAdapter.getFeeData({
+          adapterFees = await cosmosChainAdapter.getFeeData({
             to,
             value,
-            chainSpecific: { contractAddress, from },
             sendMax: true
           })
           fastFee = adapterFees.fast.txFee
           break
         }
-        case ChainTypes.Bitcoin: {
-          if (!accountType)
-            throw new Error('useSendDetails: no accountType from accountIdToUtxoParams')
-          if (!utxoParams) {
-            throw new Error('useSendDetails: no utxoParams from accountIdToUtxoParams')
-          }
-          const { bip44Params, scriptType } = utxoParams
-          const pubkeys = await wallet.getPublicKeys([
-            {
-              coin: adapter.getType(),
-              addressNList: bip32ToAddressNList(toRootDerivationPath(bip44Params)),
-              curve: 'secp256k1',
-              scriptType
-            }
-          ])
-
-          if (!pubkeys?.[0]?.xpub) throw new Error('no pubkeys')
-          const pubkey = convertXpubVersion(pubkeys[0].xpub, accountType)
-          const btcAdapter = chainAdapterManager.byChain(ChainTypes.Bitcoin)
-          const value = assetBalance
-          adapterFees = await btcAdapter.getFeeData({
-            to,
-            value,
-            chainSpecific: { pubkey },
-            sendMax: true
-          })
-          fastFee = adapterFees.fast.txFee
-          break
+        case ChainTypes.Osmosis: {
+          // TODO(gomes): wire up
+          return
         }
         default: {
           throw new Error(`useSendDetails(handleSendMax): no adapter available for chain ${chain}`)
@@ -294,7 +233,6 @@ export const useSendDetails = (): UseSendDetailsReturnType => {
           estimatedFees = await estimateFormFees()
           setValue(SendFormFields.EstimatedFees, estimatedFees)
         } catch (e) {
-          console.log('one')
           setValue(SendFormFields.AmountFieldError, 'common.insufficientFunds')
           setLoading(false)
 
