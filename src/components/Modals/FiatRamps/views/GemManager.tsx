@@ -1,11 +1,13 @@
 import { Box } from '@chakra-ui/react'
+import { ChainTypes } from '@shapeshiftoss/types'
 import { AnimatePresence } from 'framer-motion'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { matchPath, MemoryRouter, Redirect, Route, Switch } from 'react-router'
 import { SlideTransition } from 'components/SlideTransition'
+import { useChainAdapters } from 'context/ChainAdaptersProvider/ChainAdaptersProvider'
+import { ensReverseLookup } from 'lib/ens'
 
-import { FiatRampAction } from '../const'
-import { GemCurrency } from '../FiatRamps'
+import { FiatRampAction, GemCurrency } from '../FiatRamps'
 import { AssetSelect } from './AssetSelect'
 import { GemOverview } from './GemOverview'
 
@@ -16,8 +18,25 @@ export const GemManagerRoutes = (props: any) => {
 
   const [selectedAsset, setSelectedAsset] = useState<GemCurrency | null>(null)
   const [isBTC, setIsBTC] = useState<boolean | null>(null)
-  // We fetch Bitcoin address in manager so that we don't have to check for BTC support on every <GemOverview /> mount
+  // We addresses in manager so we don't have to on every <GemOverview /> mount
   const [btcAddress, setBtcAddress] = useState<string | null>(null)
+  const [ethAddress, setEthAddress] = useState<string | null>(null)
+  const [supportsAddressVerifying, setSupportsAddressVerifying] = useState<boolean | null>(null)
+  const [ensName, setEnsName] = useState<string | null>()
+
+  const chainAdapterManager = useChainAdapters()
+  const [chainType, setChainType] = useState<ChainTypes>(ChainTypes.Ethereum)
+  const chainAdapter = chainAdapterManager.byChain(chainType)
+
+  useEffect(() => {
+    ;(async () => {
+      if (ethAddress && !ensName) {
+        const reverseEthAddressLookup = await ensReverseLookup(ethAddress)
+        if (reverseEthAddressLookup?.name) setEnsName(reverseEthAddressLookup.name)
+      }
+    })()
+  }, [ensName, ethAddress])
+
   const match = matchPath<{ fiatRampAction: FiatRampAction }>(location.pathname, {
     path: '/:fiatRampAction'
   })
@@ -48,7 +67,13 @@ export const GemManagerRoutes = (props: any) => {
             onIsSelectingAsset={handleIsSelectingAsset}
             onFiatRampActionClick={handleFiatRampActionClick}
             btcAddress={btcAddress}
+            ethAddress={ethAddress}
             setBtcAddress={setBtcAddress}
+            setEthAddress={setEthAddress}
+            supportsAddressVerifying={supportsAddressVerifying}
+            setSupportsAddressVerifying={setSupportsAddressVerifying}
+            chainAdapter={chainAdapter}
+            setChainType={setChainType}
             isBTC={isBTC}
           />
         </Route>

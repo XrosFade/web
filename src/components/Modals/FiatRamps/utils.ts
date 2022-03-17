@@ -7,8 +7,7 @@ import { matchSorter } from 'match-sorter'
 import queryString from 'querystring'
 import { bnOrZero } from 'lib/bignumber/bignumber'
 
-import { FiatRampAction } from './const'
-import { GemCurrency, SupportedCurrency, TransactionDirection } from './FiatRamps'
+import { FiatRampAction, GemCurrency, SupportedCurrency, TransactionDirection } from './FiatRamps'
 
 const ASSET_LOGO_BASE_URI = getConfig().REACT_APP_GEM_ASSET_LOGO
 

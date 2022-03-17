@@ -10,106 +10,103 @@ import {
   Text as RawText,
   useToast
 } from '@chakra-ui/react'
-import { supportsBTC } from '@shapeshiftoss/hdwallet-core'
+import { ChainAdapter } from '@shapeshiftoss/chain-adapters'
+import { ChainAdapter as BitcoinChainAdapter } from '@shapeshiftoss/chain-adapters/dist/bitcoin/BitcoinChainAdapter'
+import { ChainAdapter as EthereumChainAdapter } from '@shapeshiftoss/chain-adapters/dist/ethereum/EthereumChainAdapter'
+import { HDWallet, supportsBTC } from '@shapeshiftoss/hdwallet-core'
 import { ChainTypes } from '@shapeshiftoss/types'
 import { History } from 'history'
-import { useEffect, useMemo, useReducer } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslate } from 'react-polyglot'
 import { useParams } from 'react-router'
 import { AssetIcon } from 'components/AssetIcon'
 import { SlideTransition } from 'components/SlideTransition'
 import { Text } from 'components/Text'
-import { useChainAdapters } from 'context/ChainAdaptersProvider/ChainAdaptersProvider'
 import { useModal } from 'context/ModalProvider/ModalProvider'
 import { useWallet } from 'context/WalletProvider/WalletProvider'
-import { ensReverseLookup } from 'lib/ens'
 
 import { FiatRampActionButtons } from '../components/FiatRampActionButtons'
-import { FiatRampAction, GemManagerAction } from '../const'
-import { reducer } from '../reducer'
-import { initialState } from '../state'
+import { FiatRampAction, GemCurrency } from '../FiatRamps'
 import { getAssetLogoUrl, makeGemPartnerUrl, middleEllipsis } from '../utils'
 
 type GemOverviewProps = {
   history: History
-  selectedAsset: any
-  isBTC: any
+  selectedAsset: GemCurrency | null
+  isBTC: boolean
   btcAddress: string | null
+  ethAddress: string | null
+  ensName: string | null
+  supportsAddressVerifying: boolean | null
+  setSupportsAddressVerifying: (wallet: HDWallet) => boolean
   setBtcAddress: (btcAddress: string) => void
+  setEthAddress: (ethAddress: string) => void
   onFiatRampActionClick: (fiatRampAction: FiatRampAction) => void
   onIsSelectingAsset: (supportsBTC: Boolean, selectAssetTranslation: string) => void
+  chainAdapter: ChainAdapter<ChainTypes>
+  setChainType: (chainType: ChainTypes) => void
 }
 export const GemOverview = ({
   history,
   onIsSelectingAsset,
   onFiatRampActionClick,
   setBtcAddress,
+  setEthAddress,
+  supportsAddressVerifying,
+  setSupportsAddressVerifying,
   btcAddress,
+  ethAddress,
+  ensName,
   selectedAsset,
-  isBTC
+  isBTC,
+  chainAdapter,
+  setChainType
 }: GemOverviewProps) => {
   const translate = useTranslate()
   const { fiatRampAction } = useParams<{ fiatRampAction: FiatRampAction }>()
   const toast = useToast()
   const { fiatRamps } = useModal()
 
-  const [state, dispatch] = useReducer(reducer, initialState)
+  const [shownOnDisplay, setShownOnDisplay] = useState<Boolean | null>(null)
   const {
     state: { wallet }
   } = useWallet()
-  const chainAdapterManager = useChainAdapters()
-  const ethChainAdapter = chainAdapterManager.byChain(ChainTypes.Ethereum)
-  const btcChainAdapter = chainAdapterManager.byChain(ChainTypes.Bitcoin)
-
-  const addressOrNameFull = isBTC ? btcAddress : state.ensName || state.ethAddress
-  const addressFull = isBTC ? btcAddress : state.ethAddress
+  const addressOrNameFull = isBTC ? btcAddress : ensName || ethAddress
+  const addressFull = isBTC ? btcAddress : ethAddress
   const addressOrNameEllipsed =
     isBTC && btcAddress
       ? middleEllipsis(btcAddress, 11)
-      : state.ensName || middleEllipsis(state.ethAddress || '', 11)
+      : ensName || middleEllipsis(ethAddress || '', 11)
 
   useEffect(() => {
-    const chainAdapter = wallet && isBTC && supportsBTC(wallet) ? btcChainAdapter : ethChainAdapter
-
-    dispatch({ type: GemManagerAction.SET_SUPPORTS_ADDRESS_VERIFYING, wallet })
-    dispatch({
-      type: GemManagerAction.SET_CHAIN_ADAPTER,
-      chainAdapter: chainAdapter
-    })
-  }, [wallet, ethChainAdapter, btcChainAdapter, isBTC])
+    const chainType =
+      wallet && isBTC && supportsBTC(wallet) ? ChainTypes.Bitcoin : ChainTypes.Ethereum
+    setChainType(chainType)
+    if (wallet && !supportsAddressVerifying) setSupportsAddressVerifying(wallet)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wallet, isBTC])
 
   useEffect(() => {
     ;(async () => {
-      if (!wallet || !state.chainAdapter) return
-      if (!state.ethAddress && !isBTC) {
-        const ethAddress = await state.chainAdapter.getAddress({
+      if (!wallet || !chainAdapter) return
+      if (!ethAddress && !isBTC && chainAdapter instanceof EthereumChainAdapter) {
+        const ethAddress = await chainAdapter.getAddress({
           wallet
         })
-        dispatch({ type: GemManagerAction.SET_ETH_ADDRESS, ethAddress })
+        setEthAddress(ethAddress)
       }
-      if (wallet && supportsBTC(wallet) && !btcAddress) {
-        const btcAddress = await btcChainAdapter.getAddress({
+      if (
+        wallet &&
+        supportsBTC(wallet) &&
+        !btcAddress &&
+        chainAdapter instanceof BitcoinChainAdapter
+      ) {
+        const btcAddress = await chainAdapter.getAddress({
           wallet
         })
         setBtcAddress(btcAddress)
       }
-
-      if (state.ethAddress && !state.ensName) {
-        const reverseEthAddressLookup = await ensReverseLookup(state.ethAddress)
-        !reverseEthAddressLookup.error &&
-          dispatch({ type: GemManagerAction.SET_ENS_NAME, ensName: reverseEthAddressLookup.name })
-      }
     })()
-  }, [
-    setBtcAddress,
-    btcChainAdapter,
-    isBTC,
-    state.ensName,
-    state.ethAddress,
-    btcAddress,
-    wallet,
-    state.chainAdapter
-  ])
+  }, [setEthAddress, setBtcAddress, isBTC, ensName, ethAddress, btcAddress, wallet, chainAdapter])
 
   const [selectAssetTranslation, assetTranslation, fundsTranslation] = useMemo(
     () =>
@@ -139,11 +136,13 @@ export const GemOverview = ({
 
   const handleVerify = async () => {
     if (!wallet) return
-    const deviceAddress = await state.chainAdapter.getAddress({
+    const deviceAddress = await chainAdapter.getAddress({
       wallet,
       showOnDevice: true
     })
-    dispatch({ type: GemManagerAction.SET_SHOWN_ON_DISPLAY, btcAddress, deviceAddress })
+    const shownOnDisplay =
+      Boolean(deviceAddress) && (deviceAddress === ethAddress || deviceAddress === btcAddress)
+    setShownOnDisplay(shownOnDisplay)
   }
 
   return (
@@ -186,7 +185,7 @@ export const GemOverview = ({
             <Text translation={fundsTranslation} color='gray.500' mt='15px' mb='8px'></Text>
             <InputGroup size='md'>
               <Input pr='4.5rem' value={addressOrNameEllipsed} readOnly />
-              <InputRightElement width={state.supportsAddressVerifying ? '4.5rem' : undefined}>
+              <InputRightElement width={supportsAddressVerifying ? '4.5rem' : undefined}>
                 <IconButton
                   icon={<CopyIcon />}
                   aria-label='copy-icon'
@@ -195,16 +194,16 @@ export const GemOverview = ({
                   variant='ghost'
                   onClick={handleCopyClick}
                 />
-                {state.supportsAddressVerifying && (
+                {supportsAddressVerifying && (
                   <IconButton
-                    icon={state.shownOnDisplay ? <CheckIcon /> : <ViewIcon />}
+                    icon={shownOnDisplay ? <CheckIcon /> : <ViewIcon />}
                     onClick={handleVerify}
                     aria-label='check-icon'
                     size='sm'
                     color={
-                      state.shownOnDisplay
+                      shownOnDisplay
                         ? 'green.500'
-                        : state.shownOnDisplay === false
+                        : shownOnDisplay === false
                         ? 'red.500'
                         : 'gray.500'
                     }
@@ -223,7 +222,7 @@ export const GemOverview = ({
           disabled={!selectedAsset}
           as='a'
           mt='25px'
-          href={makeGemPartnerUrl(fiatRampAction, selectedAsset?.ticker || '', addressFull)}
+          href={makeGemPartnerUrl(fiatRampAction, selectedAsset?.ticker || '', addressFull || '')}
           target='_blank'
         >
           <Text translation='common.continue' />
