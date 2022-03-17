@@ -4,7 +4,6 @@ export enum FiatRampAction {
 }
 
 export enum GemManagerAction {
-  SET_BTC_ADDRESS,
   SET_ETH_ADDRESS,
   SET_ENS_NAME,
   SET_SUPPORTS_ADDRESS_VERIFYING,
@@ -16,7 +15,5 @@ export enum GemManagerAction {
   FETCH_STARTED,
   FETCH_COMPLETED,
   SELECT_ASSET,
-  SET_IS_BTC,
-  SET_IS_SELECTING_ASSET,
   SET_SHOWN_ON_DISPLAY
 }

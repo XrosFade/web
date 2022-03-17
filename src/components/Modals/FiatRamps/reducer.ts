@@ -3,7 +3,6 @@ import { PortisHDWallet } from '@shapeshiftoss/hdwallet-portis'
 
 import { GemManagerAction } from './const'
 import { GemManagerState } from './state'
-import { isSupportedBitcoinAsset, parseGemBuyAssets, parseGemSellAssets } from './utils'
 
 export const reducer = (state: GemManagerState, action: Record<any, any>) => {
   switch (action.type) {
@@ -11,11 +10,6 @@ export const reducer = (state: GemManagerState, action: Record<any, any>) => {
       return {
         ...state,
         ethAddress: action.ethAddress
-      }
-    case GemManagerAction.SET_BTC_ADDRESS:
-      return {
-        ...state,
-        btcAddress: action.btcAddress
       }
     case GemManagerAction.SET_ENS_NAME:
       return {
@@ -36,29 +30,22 @@ export const reducer = (state: GemManagerState, action: Record<any, any>) => {
         ...state,
         fiatRampAction: action.fiatRampAction
       }
-    case GemManagerAction.SET_IS_SELECTING_ASSET:
-      return {
-        ...state,
-        isSelectingAsset: action.isSelectingAsset
-      }
     case GemManagerAction.SET_CHAIN_ADAPTER:
       return {
         ...state,
         chainAdapter: action.chainAdapter
       }
-    case GemManagerAction.SET_IS_BTC:
-      const isBTC = isSupportedBitcoinAsset(action.assetId)
-      return {
-        ...state,
-        isBTC: isBTC
-      }
     case GemManagerAction.SET_SHOWN_ON_DISPLAY:
+      const shownOnDisplay =
+        Boolean(action.deviceAddress) &&
+        (action.deviceAddress === state.ethAddress || action.deviceAddress === action.btcAddress)
+
       return {
         ...state,
-        shownOnDisplay: action.shownOnDisplay
+        btcAddress: action.btcAddress,
+        shownOnDisplay
       }
     default:
-      console.log({ action, state })
       throw new Error('Todo')
   }
 }

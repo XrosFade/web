@@ -94,34 +94,32 @@ export const parseGemBuyAssets = memoize(
     )
 )
 
-const parseGemAssets = memoize(
-  (
-    key: 'destination' | 'source',
-    supportsBtc: boolean,
-    filteredCoinifyList: GemCurrency[][],
-    filteredWyreList: GemCurrency[][],
-    balances: MixedPortfolioAssetBalances
-  ): GemCurrency[] => {
-    const results = uniqBy(flatten(concat(filteredCoinifyList, filteredWyreList)), 'gem_asset_id')
-      .filter(asset => Boolean(adapters.gemAssetIdToCAIP19(asset.gem_asset_id)))
-      .map(asset => {
-        const assetId = adapters.gemAssetIdToCAIP19(asset.gem_asset_id) || ''
-        return {
-          ...asset,
-          assetId,
-          disabled: isSupportedBitcoinAsset(assetId) && !supportsBtc,
-          cryptoBalance: bnOrZero(balances?.[assetId]?.crypto),
-          fiatBalance: bnOrZero(balances?.[assetId]?.fiat)
-        }
-      })
-      .sort((a, b) =>
-        key === 'source' && (a.fiatBalance.gt(0) || b.fiatBalance.gt(0))
-          ? b.fiatBalance.minus(a.fiatBalance).toNumber()
-          : a.name.localeCompare(b.name)
-      )
-    return results
-  }
-)
+const parseGemAssets = (
+  key: 'destination' | 'source',
+  supportsBtc: boolean,
+  filteredCoinifyList: GemCurrency[][],
+  filteredWyreList: GemCurrency[][],
+  balances: MixedPortfolioAssetBalances
+): GemCurrency[] => {
+  const results = uniqBy(flatten(concat(filteredCoinifyList, filteredWyreList)), 'gem_asset_id')
+    .filter(asset => Boolean(adapters.gemAssetIdToCAIP19(asset.gem_asset_id)))
+    .map(asset => {
+      const assetId = adapters.gemAssetIdToCAIP19(asset.gem_asset_id) || ''
+      return {
+        ...asset,
+        assetId,
+        disabled: isSupportedBitcoinAsset(assetId) && !supportsBtc,
+        cryptoBalance: bnOrZero(balances?.[assetId]?.crypto),
+        fiatBalance: bnOrZero(balances?.[assetId]?.fiat)
+      }
+    })
+    .sort((a, b) =>
+      key === 'source' && (a.fiatBalance.gt(0) || b.fiatBalance.gt(0))
+        ? b.fiatBalance.minus(a.fiatBalance).toNumber()
+        : a.name.localeCompare(b.name)
+    )
+  return results
+}
 
 const memoizeAllArgsResolver = (...args: any) => JSON.stringify(args)
 export const makeGemPartnerUrl = memoize(

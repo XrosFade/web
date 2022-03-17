@@ -1,273 +1,76 @@
-import { CheckIcon, ChevronRightIcon, CopyIcon, ViewIcon } from '@chakra-ui/icons'
-import {
-  Box,
-  Button,
-  Flex,
-  IconButton,
-  Input,
-  InputGroup,
-  InputRightElement,
-  Text as RawText,
-  useToast
-} from '@chakra-ui/react'
-import { supportsBTC } from '@shapeshiftoss/hdwallet-core'
-import { ChainTypes } from '@shapeshiftoss/types'
-import { useEffect, useMemo, useReducer } from 'react'
-import { useTranslate } from 'react-polyglot'
-import { useHistory, useLocation, useParams } from 'react-router'
-import { AssetIcon } from 'components/AssetIcon'
+import { Box } from '@chakra-ui/react'
+import { AnimatePresence } from 'framer-motion'
+import { useState } from 'react'
+import { matchPath, MemoryRouter, Redirect, Route, Switch } from 'react-router'
 import { SlideTransition } from 'components/SlideTransition'
-import { Text } from 'components/Text'
-import { useChainAdapters } from 'context/ChainAdaptersProvider/ChainAdaptersProvider'
-import { useModal } from 'context/ModalProvider/ModalProvider'
-import { useWallet } from 'context/WalletProvider/WalletProvider'
-import { ensReverseLookup } from 'lib/ens'
 
-import { FiatRampActionButtons } from '../components/FiatRampActionButtons'
-import { FiatRampAction, GemManagerAction } from '../const'
+import { FiatRampAction } from '../const'
 import { GemCurrency } from '../FiatRamps'
-import { reducer } from '../reducer'
-import { initialState } from '../state'
-import { getAssetLogoUrl, makeGemPartnerUrl, middleEllipsis } from '../utils'
+import { AssetSelect } from './AssetSelect'
+import { GemOverview } from './GemOverview'
 
-type LocationProps = {
-  selectedAsset?: any
-}
-export const GemManager = () => {
-  const translate = useTranslate()
-  const history = useHistory()
-  const location = useLocation<LocationProps>()
-  const { fiatRampAction } = useParams<{ fiatRampAction: FiatRampAction }>()
-  const toast = useToast()
-  const { fiatRamps } = useModal()
+export const entries = ['/buy', '/buy/select', '/sell', '/sell/select']
 
-  const [state, dispatch] = useReducer(reducer, initialState)
-  const setIsSelectingAsset = () => {
-    const route = fiatRampAction === FiatRampAction.Buy ? '/buy/select' : '/sell/select'
-    history.push(route, {
-      selectAssetTranslation,
-      setIsSelectingAsset,
-      onAssetSelect,
-      supportsBtc: wallet && supportsBTC(wallet)
-    })
-  }
+export const GemManagerRoutes = (props: any) => {
+  const { location, history } = props
 
-  const setFiatRampAction = (fiatRampAction: FiatRampAction) => {
+  const [selectedAsset, setSelectedAsset] = useState<GemCurrency | null>(null)
+  const [isBTC, setIsBTC] = useState<boolean | null>(null)
+  // We fetch Bitcoin address in manager so that we don't have to check for BTC support on every <GemOverview /> mount
+  const [btcAddress, setBtcAddress] = useState<string | null>(null)
+  const match = matchPath<{ fiatRampAction: FiatRampAction }>(location.pathname, {
+    path: '/:fiatRampAction'
+  })
+  const handleFiatRampActionClick = (fiatRampAction: FiatRampAction) => {
     const route = fiatRampAction === FiatRampAction.Buy ? '/buy/' : '/sell/'
+    setSelectedAsset(null)
     history.push(route)
   }
-
-  const {
-    state: { wallet }
-  } = useWallet()
-  const chainAdapterManager = useChainAdapters()
-  const ethChainAdapter = chainAdapterManager.byChain(ChainTypes.Ethereum)
-  const btcChainAdapter = chainAdapterManager.byChain(ChainTypes.Bitcoin)
-
-  const addressOrNameFull = state.isBTC ? state.btcAddress : state.ensName || state.ethAddress
-
-  const addressFull = state.isBTC ? state.btcAddress : state.ethAddress
-
-  const addressOrNameEllipsed =
-    state.isBTC && state.btcAddress
-      ? middleEllipsis(state.btcAddress, 11)
-      : state.ensName || middleEllipsis(state.ethAddress || '', 11)
-
-  useEffect(() => {
-    ;(async () => {
-      dispatch({ type: GemManagerAction.SET_SUPPORTS_ADDRESS_VERIFYING, wallet })
-    })()
-  }, [wallet])
-
-  useEffect(() => {
-    if (location.state?.selectedAsset?.ticker) {
-      dispatch({
-        type: GemManagerAction.SET_IS_BTC,
-        assetId: location.state.selectedAsset?.assetId
-      })
-
-      const chainAdapter =
-        wallet && state.isBTC && supportsBTC(wallet) ? btcChainAdapter : ethChainAdapter
-
-      dispatch({
-        type: GemManagerAction.SET_CHAIN_ADAPTER,
-        chainAdapter: chainAdapter
-      })
-    }
-  }, [
-    location.state?.selectedAsset?.ticker,
-    btcChainAdapter,
-    ethChainAdapter,
-    wallet,
-    state.isBTC,
-    state.btcAddress
-  ])
-
-  useEffect(() => {
-    ;(async () => {
-      if (!wallet || !state.chainAdapter) return
-      if (!state.ethAddress && !state.isBTC) {
-        const ethAddress = await state.chainAdapter.getAddress({
-          wallet
-        })
-        dispatch({ type: GemManagerAction.SET_ETH_ADDRESS, ethAddress })
-      }
-      if (wallet && !state.btcAddress) {
-        const btcAddress =
-          wallet && supportsBTC(wallet)
-            ? await btcChainAdapter.getAddress({
-                wallet
-              })
-            : ''
-        dispatch({ type: GemManagerAction.SET_BTC_ADDRESS, btcAddress })
-      }
-
-      if (state.ethAddress && !state.ensName) {
-        const reverseEthAddressLookup = await ensReverseLookup(state.ethAddress)
-        !reverseEthAddressLookup.error &&
-          dispatch({ type: GemManagerAction.SET_ENS_NAME, ensName: reverseEthAddressLookup.name })
-      }
-    })()
-  }, [state.isBTC, state.ensName, state.ethAddress, state.btcAddress, wallet, state.chainAdapter])
-
-  const [selectAssetTranslation, assetTranslation, fundsTranslation] = useMemo(
-    () =>
-      fiatRampAction === FiatRampAction.Buy
-        ? ['fiatRamps.selectAnAssetToBuy', 'fiatRamps.assetToBuy', 'fiatRamps.fundsTo']
-        : ['fiatRamps.selectAnAssetToSell', 'fiatRamps.assetToSell', 'fiatRamps.fundsFrom'],
-    [fiatRampAction]
-  )
-
-  const onAssetSelect = (data: GemCurrency) => {
-    const route = fiatRampAction === FiatRampAction.Buy ? '/buy' : '/sell'
-
-    history.push(route, {
-      selectedAsset: data,
-      // Reset shown on display status
-      shownOnDisplay: null
-    })
+  const handleAssetSelect = (asset: GemCurrency, isBTC: boolean) => {
+    const route = match?.params.fiatRampAction === FiatRampAction.Buy ? '/buy/' : '/sell/'
+    setSelectedAsset(asset)
+    setIsBTC(isBTC)
+    history.push(route)
   }
-
-  const handleCopyClick = async () => {
-    const duration = 2500
-    const isClosable = true
-    const toastPayload = { duration, isClosable }
-    try {
-      await navigator.clipboard.writeText(addressOrNameFull as string)
-      const title = translate('common.copied')
-      const status = 'success'
-      const description = addressOrNameFull
-      toast({ description, title, status, ...toastPayload })
-    } catch (e) {
-      const title = translate('common.copyFailed')
-      const status = 'error'
-      const description = translate('common.copyFailedDescription')
-      toast({ description, title, status })
-    }
-  }
-
-  const handleVerify = async () => {
-    if (!wallet) return
-    const deviceAddress = await state.chainAdapter.getAddress({
-      wallet,
-      showOnDevice: true
-    })
-
-    const shownOnDisplay =
-      Boolean(deviceAddress) &&
-      (deviceAddress === state.ethAddress || deviceAddress === state.btcAddress)
-
-    dispatch({ type: GemManagerAction.SET_SHOWN_ON_DISPLAY, shownOnDisplay })
+  const handleIsSelectingAsset = (supportsBTC: Boolean, selectAssetTranslation: string) => {
+    const route =
+      match?.params.fiatRampAction === FiatRampAction.Buy ? '/buy/select' : '/sell/select'
+    history.push(route, { supportsBTC, selectAssetTranslation })
   }
 
   return (
+    <AnimatePresence exitBeforeEnter initial={false}>
+      <Switch location={location} key={location.key}>
+        <Route exact path='/:fiatRampAction'>
+          <GemOverview
+            {...props}
+            selectedAsset={selectedAsset}
+            onIsSelectingAsset={handleIsSelectingAsset}
+            onFiatRampActionClick={handleFiatRampActionClick}
+            btcAddress={btcAddress}
+            setBtcAddress={setBtcAddress}
+            isBTC={isBTC}
+          />
+        </Route>
+        <Route exact path='/:fiatRampAction/select'>
+          <AssetSelect {...location.state} onAssetSelect={handleAssetSelect} />
+        </Route>
+        <Redirect from='/' to='/buy' />
+      </Switch>
+    </AnimatePresence>
+  )
+}
+
+export const GemManager = () => {
+  return (
     <SlideTransition>
-      <Flex direction='column'>
-        <FiatRampActionButtons action={fiatRampAction} setAction={setFiatRampAction} />
-        <Text
-          translation={assetTranslation}
-          color='gray.500'
-          fontWeight='semibold'
-          mt='15px'
-          mb='8px'
-        />
-        <Button
-          width='full'
-          colorScheme='gray'
-          justifyContent='space-between'
-          height='70px'
-          onClick={() => setIsSelectingAsset()}
-          rightIcon={<ChevronRightIcon color='gray.500' boxSize={6} />}
-        >
-          {location.state?.selectedAsset ? (
-            <Flex alignItems='center'>
-              <AssetIcon src={getAssetLogoUrl(location.state?.selectedAsset)} mr={4} />
-              <Box textAlign='left'>
-                <RawText lineHeight={1}>{location.state?.selectedAsset.name}</RawText>
-                <RawText fontWeight='normal' fontSize='sm' color='gray.500'>
-                  {location.state?.selectedAsset?.ticker}
-                </RawText>
-              </Box>
-            </Flex>
-          ) : (
-            <Text translation={selectAssetTranslation} color='gray.500' />
-          )}
-        </Button>
-        {location.state?.selectedAsset && (
-          <Flex flexDirection='column' mb='10px'>
-            <Text translation={fundsTranslation} color='gray.500' mt='15px' mb='8px'></Text>
-            <InputGroup size='md'>
-              <Input pr='4.5rem' value={addressOrNameEllipsed} readOnly />
-              <InputRightElement width={state.supportsAddressVerifying ? '4.5rem' : undefined}>
-                <IconButton
-                  icon={<CopyIcon />}
-                  aria-label='copy-icon'
-                  size='sm'
-                  isRound
-                  variant='ghost'
-                  onClick={handleCopyClick}
-                />
-                {state.supportsAddressVerifying && (
-                  <IconButton
-                    icon={state.shownOnDisplay ? <CheckIcon /> : <ViewIcon />}
-                    onClick={handleVerify}
-                    aria-label='check-icon'
-                    size='sm'
-                    color={
-                      state.shownOnDisplay
-                        ? 'green.500'
-                        : state.shownOnDisplay === false
-                        ? 'red.500'
-                        : 'gray.500'
-                    }
-                    isRound
-                    variant='ghost'
-                  />
-                )}
-              </InputRightElement>
-            </InputGroup>
-          </Flex>
-        )}
-        <Button
-          width='full'
-          size='lg'
-          colorScheme='blue'
-          disabled={!location.state?.selectedAsset}
-          as='a'
-          mt='25px'
-          href={makeGemPartnerUrl(
-            fiatRampAction,
-            location.state?.selectedAsset?.ticker || '',
-            addressFull
-          )}
-          target='_blank'
-        >
-          <Text translation='common.continue' />
-        </Button>
-        <Button width='full' size='lg' variant='ghost' onClick={fiatRamps.close}>
-          <Text translation='common.cancel' />
-        </Button>
-      </Flex>
+      <MemoryRouter initialEntries={entries}>
+        <Box m={4} width={'24rem'}>
+          <Switch>
+            <Route path='/' component={GemManagerRoutes} />
+          </Switch>
+        </Box>
+      </MemoryRouter>
     </SlideTransition>
   )
 }

@@ -9,21 +9,27 @@ import { useAppSelector } from 'state/store'
 
 import { AssetSearch } from '../components/AssetSearch/AssetSearch'
 import { FiatRampAction } from '../const'
+import { GemCurrency } from '../FiatRamps'
 import {
   fetchCoinifySupportedCurrencies,
   fetchWyreSupportedCurrencies,
+  isSupportedBitcoinAsset,
   parseGemBuyAssets,
   parseGemSellAssets
 } from '../utils'
 
+type AssetSelectProps = {
+  onAssetSelect: (asset: GemCurrency, isBTC: boolean) => void
+  supportsBTC: boolean
+  selectAssetTranslation: string
+}
 export const AssetSelect = ({
-  supportsBtc,
-  selectAssetTranslation,
-  setIsSelectingAsset,
-  onAssetSelect
-}) => {
+  onAssetSelect,
+  supportsBTC,
+  selectAssetTranslation
+}: AssetSelectProps) => {
   const history = useHistory()
-  const { fiatRampAction } = useParams()
+  const { fiatRampAction } = useParams<{ fiatRampAction: FiatRampAction }>()
   const [buyList, setBuyList] = useState<any>([])
   const [sellList, setSellList] = useState<any>([])
   const [coinifyAssets, setCoinifyAssets] = useState<any>([])
@@ -48,23 +54,23 @@ export const AssetSelect = ({
       }
 
       if (coinifyAssets.length && wyreAssets.length) {
-        const buyList = parseGemBuyAssets(supportsBtc, coinifyAssets, wyreAssets, balances)
+        const buyList = parseGemBuyAssets(supportsBTC, coinifyAssets, wyreAssets, balances)
 
         if (!buyList.length) return
         setBuyList(buyList)
 
-        const sellList = parseGemSellAssets(supportsBtc, coinifyAssets, wyreAssets, balances)
+        const sellList = parseGemSellAssets(supportsBTC, coinifyAssets, wyreAssets, balances)
         if (!sellList.length) return
         setSellList(sellList)
 
         setLoading(false)
       }
     })()
-  }, [supportsBtc, coinifyAssets, wyreAssets, balances])
+  }, [supportsBTC, coinifyAssets, wyreAssets, balances])
 
   return (
     <SlideTransition>
-      <Stack>
+      <Stack height='338px'>
         <Flex>
           <IconButton
             icon={<ArrowBackIcon />}
@@ -78,7 +84,9 @@ export const AssetSelect = ({
           <Text alignSelf='center' translation={selectAssetTranslation} />
         </Flex>
         <AssetSearch
-          onClick={onAssetSelect}
+          onClick={(asset: GemCurrency) =>
+            onAssetSelect(asset, isSupportedBitcoinAsset(asset.assetId))
+          }
           type={fiatRampAction}
           assets={fiatRampAction === FiatRampAction.Buy ? buyList : sellList}
           loading={loading}
