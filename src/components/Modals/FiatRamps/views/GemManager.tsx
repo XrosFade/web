@@ -78,10 +78,10 @@ export const GemManagerRoutes = (props: any) => {
     setIsBTC(isBTC)
     history.push(route)
   }
-  const handleIsSelectingAsset = (supportsBTC: Boolean, selectAssetTranslation: string) => {
+  const handleIsSelectingAsset = (walletSupportsBTC: Boolean, selectAssetTranslation: string) => {
     const route =
       match?.params.fiatRampAction === FiatRampAction.Buy ? '/buy/select' : '/sell/select'
-    history.push(route, { supportsBTC, selectAssetTranslation })
+    history.push(route, { walletSupportsBTC, selectAssetTranslation })
   }
 
   return (

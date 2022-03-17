@@ -63,14 +63,14 @@ export const isSellAsset = (currency: SupportedCurrency) =>
 
 export const parseGemSellAssets = memoize(
   (
-    supportsBtc: boolean,
+    walletSupportsBTC: boolean,
     coinifyAssets: SupportedCurrency[],
     wyreAssets: SupportedCurrency[],
     balances: MixedPortfolioAssetBalances
   ): GemCurrency[] =>
     parseGemAssets(
       'source',
-      supportsBtc,
+      walletSupportsBTC,
       coinifyAssets.filter(isSellAsset).map(coinifyList => coinifyList['source'].currencies),
       wyreAssets.filter(isSellAsset).map(wyreList => wyreList['source'].currencies),
       balances
@@ -79,14 +79,14 @@ export const parseGemSellAssets = memoize(
 
 export const parseGemBuyAssets = memoize(
   (
-    supportsBtc: boolean,
+    walletSupportsBTC: boolean,
     coinifyAssets: SupportedCurrency[],
     wyreAssets: SupportedCurrency[],
     balances: MixedPortfolioAssetBalances
   ): GemCurrency[] =>
     parseGemAssets(
       'destination',
-      supportsBtc,
+      walletSupportsBTC,
       coinifyAssets.filter(isBuyAsset).map(coinifyList => coinifyList['destination'].currencies),
       wyreAssets.filter(isBuyAsset).map(wyreList => wyreList['destination'].currencies),
       balances
@@ -95,7 +95,7 @@ export const parseGemBuyAssets = memoize(
 
 const parseGemAssets = (
   key: 'destination' | 'source',
-  supportsBtc: boolean,
+  walletSupportsBTC: boolean,
   filteredCoinifyList: GemCurrency[][],
   filteredWyreList: GemCurrency[][],
   balances: MixedPortfolioAssetBalances
@@ -107,7 +107,7 @@ const parseGemAssets = (
       return {
         ...asset,
         assetId,
-        disabled: isSupportedBitcoinAsset(assetId) && !supportsBtc,
+        disabled: isSupportedBitcoinAsset(assetId) && !walletSupportsBTC,
         cryptoBalance: bnOrZero(balances?.[assetId]?.crypto),
         fiatBalance: bnOrZero(balances?.[assetId]?.fiat)
       }

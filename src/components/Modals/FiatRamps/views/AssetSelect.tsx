@@ -19,12 +19,12 @@ import {
 
 type AssetSelectProps = {
   onAssetSelect: (asset: GemCurrency, isBTC: boolean) => void
-  supportsBTC: boolean
+  walletSupportsBTC: boolean
   selectAssetTranslation: string
 }
 export const AssetSelect = ({
   onAssetSelect,
-  supportsBTC,
+  walletSupportsBTC,
   selectAssetTranslation
 }: AssetSelectProps) => {
   const history = useHistory()
@@ -53,19 +53,19 @@ export const AssetSelect = ({
       }
 
       if (coinifyAssets.length && wyreAssets.length) {
-        const buyList = parseGemBuyAssets(supportsBTC, coinifyAssets, wyreAssets, balances)
+        const buyList = parseGemBuyAssets(walletSupportsBTC, coinifyAssets, wyreAssets, balances)
 
         if (!buyList.length) return
         setBuyList(buyList)
 
-        const sellList = parseGemSellAssets(supportsBTC, coinifyAssets, wyreAssets, balances)
+        const sellList = parseGemSellAssets(walletSupportsBTC, coinifyAssets, wyreAssets, balances)
         if (!sellList.length) return
         setSellList(sellList)
 
         setLoading(false)
       }
     })()
-  }, [supportsBTC, coinifyAssets, wyreAssets, balances])
+  }, [walletSupportsBTC, coinifyAssets, wyreAssets, balances])
 
   return (
     <SlideTransition>
