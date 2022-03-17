@@ -12,6 +12,9 @@ import {
   useLocation
 } from 'react-router-dom'
 import { SendRoutes } from 'components/Modals/Send/Send'
+import { Confirm } from 'components/Modals/Send/views/Confirm'
+import { Details } from 'components/Modals/Send/views/Details'
+import { QrCodeScanner } from 'components/Modals/Send/views/QrCodeScanner'
 import { SelectAssetRouter, SelectAssetRoutes } from 'components/SelectAssets/SelectAssetRouter'
 import { AccountSpecifier } from 'state/slices/portfolioSlice/portfolioSlice'
 import { selectMarketDataById } from 'state/slices/selectors'
@@ -19,9 +22,6 @@ import { useAppSelector } from 'state/store'
 
 import { useFormSend } from './hooks/useFormSend/useFormSend'
 import { Address } from './views/Address'
-import { Confirm } from './views/Confirm'
-import { Details } from './views/Details'
-import { QrCodeScanner } from './views/QrCodeScanner'
 
 export enum SendFormFields {
   Address = 'address',
