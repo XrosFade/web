@@ -13,9 +13,20 @@ import { FiatRampAction, GemCurrency } from '../FiatRamps'
 import { AssetSelect } from './AssetSelect'
 import { GemOverview } from './GemOverview'
 
-export const entries = ['/buy', '/buy/select', '/sell', '/sell/select']
+export enum GemManagerRoutes {
+  Buy = '/buy',
+  Sell = '/sell',
+  BuySelect = '/buy/select',
+  SellSelect = '/sell/select'
+}
+const entries = [
+  GemManagerRoutes.Buy,
+  GemManagerRoutes.BuySelect,
+  GemManagerRoutes.Sell,
+  GemManagerRoutes.SellSelect
+]
 
-export const GemManagerRoutes = (props: any) => {
+const GemManagerRouter = (props: any) => {
   const { location, history } = props
 
   const [selectedAsset, setSelectedAsset] = useState<GemCurrency | null>(null)
@@ -68,19 +79,25 @@ export const GemManagerRoutes = (props: any) => {
     path: '/:fiatRampAction'
   })
   const handleFiatRampActionClick = (fiatRampAction: FiatRampAction) => {
-    const route = fiatRampAction === FiatRampAction.Buy ? '/buy/' : '/sell/'
+    const route =
+      fiatRampAction === FiatRampAction.Buy ? GemManagerRoutes.Buy : GemManagerRoutes.Sell
     setSelectedAsset(null)
     history.push(route)
   }
   const handleAssetSelect = (asset: GemCurrency, isBTC: boolean) => {
-    const route = match?.params.fiatRampAction === FiatRampAction.Buy ? '/buy/' : '/sell/'
+    const route =
+      match?.params.fiatRampAction === FiatRampAction.Buy
+        ? GemManagerRoutes.Buy
+        : GemManagerRoutes.Sell
     setSelectedAsset(asset)
     setIsBTC(isBTC)
     history.push(route)
   }
   const handleIsSelectingAsset = (walletSupportsBTC: Boolean, selectAssetTranslation: string) => {
     const route =
-      match?.params.fiatRampAction === FiatRampAction.Buy ? '/buy/select' : '/sell/select'
+      match?.params.fiatRampAction === FiatRampAction.Buy
+        ? GemManagerRoutes.BuySelect
+        : GemManagerRoutes.SellSelect
     history.push(route, { walletSupportsBTC, selectAssetTranslation })
   }
 
@@ -105,7 +122,7 @@ export const GemManagerRoutes = (props: any) => {
         <Route exact path='/:fiatRampAction/select'>
           <AssetSelect {...location.state} onAssetSelect={handleAssetSelect} />
         </Route>
-        <Redirect from='/' to='/buy' />
+        <Redirect from='/' to={GemManagerRoutes.Buy} />
       </Switch>
     </AnimatePresence>
   )
@@ -117,7 +134,7 @@ export const GemManager = () => {
       <MemoryRouter initialEntries={entries}>
         <Box m={4} width={'24rem'}>
           <Switch>
-            <Route path='/' component={GemManagerRoutes} />
+            <Route path='/' component={GemManagerRouter} />
           </Switch>
         </Box>
       </MemoryRouter>
