@@ -37,7 +37,7 @@ type GemOverviewProps = {
   supportsAddressVerifying: boolean | null
   setSupportsAddressVerifying: (wallet: HDWallet) => boolean
   onFiatRampActionClick: (fiatRampAction: FiatRampAction) => void
-  onIsSelectingAsset: (supportsBTC: Boolean, selectAssetTranslation: string) => void
+  onIsSelectingAsset: (walletSupportsBTC: Boolean, selectAssetTranslation: string) => void
   setChainType: (chainType: ChainTypes) => void
   chainAdapter: ChainAdapter<ChainTypes.Bitcoin | ChainTypes.Ethereum>
 }
