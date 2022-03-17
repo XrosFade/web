@@ -18,16 +18,17 @@ import { RawText, Text } from 'components/Text'
 import { breakpoints } from 'theme/theme'
 
 import { AutoCompleteSearch } from './AutoCompleteSearch/AutoCompleteSearch'
+import { FiatRamps } from './NavBar/FiatRamps'
 import { MainNavLink } from './NavBar/MainNavLink'
 import { NavBar } from './NavBar/NavBar'
 import { UserMenu } from './NavBar/UserMenu'
 
 type HeaderContentProps = {
-  route: Route
+  route?: Route
   isCompact?: boolean
 } & FlexProps
 
-export const SideNavContent = ({ route, isCompact }: HeaderContentProps) => {
+export const SideNavContent = ({ isCompact }: HeaderContentProps) => {
   const { toggleColorMode } = useColorMode()
   const translate = useTranslate()
   const [isLargerThanMd] = useMediaQuery(`(min-width: ${breakpoints['md']})`)
@@ -47,6 +48,9 @@ export const SideNavContent = ({ route, isCompact }: HeaderContentProps) => {
           <Flex width='full'>
             <UserMenu />
           </Flex>
+          <Flex width='full'>
+            <FiatRamps />
+          </Flex>
           <Box mt={12} width='full'>
             <AutoCompleteSearch />
           </Box>
@@ -64,8 +68,8 @@ export const SideNavContent = ({ route, isCompact }: HeaderContentProps) => {
         />
         <MainNavLink
           leftIcon={<ChatIcon />}
-          as={Link}
           isCompact={isCompact}
+          as={Link}
           justifyContent='flex-start'
           variant='ghost'
           label={translate('common.submitFeedback')}

@@ -10,18 +10,46 @@ import {
   useColorModeValue,
   useDisclosure
 } from '@chakra-ui/react'
-import { Link } from 'react-router-dom'
+import { useCallback, useEffect } from 'react'
+import { useSelector } from 'react-redux'
+import { Link, useHistory } from 'react-router-dom'
 import { Route } from 'Routes/helpers'
 import { FoxIcon } from 'components/Icons/FoxIcon'
+import { ReduxState } from 'state/reducer'
+import { selectFeatureFlag } from 'state/slices/preferencesSlice/selectors'
 
 import { AutoCompleteSearch } from './AutoCompleteSearch/AutoCompleteSearch'
+import { FiatRamps } from './NavBar/FiatRamps'
 import { UserMenu } from './NavBar/UserMenu'
 import { SideNavContent } from './SideNavContent'
 
 export const Header = ({ route }: { route: Route }) => {
   const { onToggle, isOpen, onClose } = useDisclosure()
+  const history = useHistory()
   const bg = useColorModeValue('white', 'gray.800')
   const borderColor = useColorModeValue('gray.100', 'gray.750')
+
+  /**
+   * FOR DEVELOPERS:
+   * Open the hidden flags menu via keypress
+   */
+  const handleKeyPress = useCallback(
+    event => {
+      if (event.altKey && event.shiftKey && event.keyCode === 70) {
+        history.push('/flags')
+      }
+    },
+    [history]
+  )
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyPress)
+    return () => document.removeEventListener('keydown', handleKeyPress)
+  }, [handleKeyPress])
+
+  // TODO(gomes): There's currently a runtime error when using the typed useAppSelector here.
+  // Find out the root cause and use it instead
+  const gemRampFlag = useSelector((state: ReduxState) => selectFeatureFlag(state, 'GemRamp'))
 
   return (
     <>
@@ -58,6 +86,11 @@ export const Header = ({ route }: { route: Route }) => {
             <AutoCompleteSearch />
           </HStack>
           <Flex justifyContent='flex-end' flex={1}>
+            {gemRampFlag && (
+              <Box display={{ base: 'none', md: 'block' }}>
+                <FiatRamps />
+              </Box>
+            )}
             <Box display={{ base: 'none', md: 'block' }}>
               <UserMenu />
             </Box>
