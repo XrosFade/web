@@ -17,16 +17,15 @@ import { useState } from 'react'
 import { useFormContext, useWatch } from 'react-hook-form'
 import { useTranslate } from 'react-polyglot'
 import { useHistory } from 'react-router-dom'
+import { AddressInput } from 'components/Modals/Send/AddressInput/AddressInput'
+import { SendFormFields, SendInput } from 'components/Modals/Send/Form'
+import { SendRoutes } from 'components/Modals/Send/Send'
 import { SelectAssetRoutes } from 'components/SelectAssets/SelectAssetRouter'
 import { SlideTransition } from 'components/SlideTransition'
 import { Text } from 'components/Text'
 import { useChainAdapters } from 'context/ChainAdaptersProvider/ChainAdaptersProvider'
 import { useModal } from 'context/ModalProvider/ModalProvider'
 import { ensLookup, ensReverseLookup } from 'lib/ens'
-
-import { AddressInput } from 'components/Modals/Send/AddressInput/AddressInput'
-import { SendFormFields, SendInput } from 'components/Modals/Send/Form'
-import { SendRoutes } from '../Send'
 
 export const Address = () => {
   const [isValidatingEnsName, setisValidatingEnsName] = useState(false)

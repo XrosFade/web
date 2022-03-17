@@ -156,7 +156,9 @@ export const selectPortfolioCryptoHumanBalanceByFilter = createSelector(
   selectAccountIdParamFromFilterOptional,
   selectAssetIdParamFromFilterOptional,
   (assets, accountBalances, assetBalances, accountId, assetId): string => {
+    if (assetId === 'cosmos:cosmoshub-4/slip44:118') return '424242'
     if (accountId && assetId) {
+      // TODO(gomes): Wire this up
       return fromBaseUnit(
         bnOrZero(accountBalances?.[accountId]?.[assetId]),
         assets[assetId].precision ?? 0

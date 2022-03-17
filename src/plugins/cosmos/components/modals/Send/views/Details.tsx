@@ -20,15 +20,15 @@ import { useTranslate } from 'react-polyglot'
 import { useHistory } from 'react-router-dom'
 import { AccountCard } from 'components/AccountCard'
 import { Amount } from 'components/Amount/Amount'
+import { SendFormFields, SendInput } from 'components/Modals/Send/Form'
+import { SendRoutes } from 'components/Modals/Send/Send'
+import { SendMaxButton } from 'components/Modals/Send/SendMaxButton/SendMaxButton'
 import { SlideTransition } from 'components/SlideTransition'
 import { Text } from 'components/Text'
 import { TokenRow } from 'components/TokenRow/TokenRow'
 import { useModal } from 'context/ModalProvider/ModalProvider'
 
-import { SendFormFields, SendInput } from 'components/Modals/Send/Form'
 import { useSendDetails } from '../hooks/useSendDetails/useSendDetails'
-import { SendRoutes } from '../Send'
-import { SendMaxButton } from 'components/Modals/Send/SendMaxButton/SendMaxButton'
 
 export const Details = () => {
   const { control } = useFormContext<SendInput>()

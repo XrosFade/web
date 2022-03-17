@@ -33,7 +33,9 @@ export const walletSupportChain: UseWalletSupportsChain = ({ chainId, wallet }) 
       return supportsBTC(wallet)
     }
     case cosmosCaip2: {
-      return supportsCosmos(wallet)
+      return true
+      // TODO(gomes): bring this back
+      // return supportsCosmos(wallet)
     }
     case osmosisCaip2: {
       return supportsOsmosis(wallet)

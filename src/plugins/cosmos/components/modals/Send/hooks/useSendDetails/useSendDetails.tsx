@@ -5,6 +5,8 @@ import { debounce } from 'lodash'
 import { useCallback, useState } from 'react'
 import { useFormContext, useWatch } from 'react-hook-form'
 import { useHistory } from 'react-router-dom'
+import { SendFormFields, SendInput } from 'components/Modals/Send/Form'
+import { SendRoutes } from 'components/Modals/Send/Send'
 import { useChainAdapters } from 'context/ChainAdaptersProvider/ChainAdaptersProvider'
 import { useWallet } from 'context/WalletProvider/WalletProvider'
 import { BigNumber, bn, bnOrZero } from 'lib/bignumber/bignumber'
@@ -19,9 +21,6 @@ import {
   selectPortfolioFiatBalanceByFilter
 } from 'state/slices/selectors'
 import { useAppSelector } from 'state/store'
-
-import { SendFormFields, SendInput } from 'components/Modals/Send/Form'
-import { SendRoutes } from '../../Send'
 
 type AmountFieldName = SendFormFields.FiatAmount | SendFormFields.CryptoAmount
 
@@ -295,6 +294,7 @@ export const useSendDetails = (): UseSendDetailsReturnType => {
           estimatedFees = await estimateFormFees()
           setValue(SendFormFields.EstimatedFees, estimatedFees)
         } catch (e) {
+          console.log('one')
           setValue(SendFormFields.AmountFieldError, 'common.insufficientFunds')
           setLoading(false)
 

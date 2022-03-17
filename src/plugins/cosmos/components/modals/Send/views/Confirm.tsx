@@ -19,15 +19,15 @@ import { useTranslate } from 'react-polyglot'
 import { useHistory } from 'react-router-dom'
 import { Amount } from 'components/Amount/Amount'
 import { MiddleEllipsis } from 'components/MiddleEllipsis/MiddleEllipsis'
+import { SendInput } from 'components/Modals/Send/Form'
+import { SendRoutes } from 'components/Modals/Send/Send'
+import { TxFeeRadioGroup } from 'components/Modals/Send/TxFeeRadioGroup'
 import { Row } from 'components/Row/Row'
 import { SlideTransition } from 'components/SlideTransition'
 import { RawText, Text } from 'components/Text'
 import { bnOrZero } from 'lib/bignumber/bignumber'
 
-import { SendInput } from 'components/Modals/Send/Form'
 import { useSendFees } from '../hooks/useSendFees/useSendFees'
-import { SendRoutes } from '../Send'
-import { TxFeeRadioGroup } from 'components/Modals/Send/TxFeeRadioGroup'
 
 export type FeePrice = {
   [key in chainAdapters.FeeDataKey]: {

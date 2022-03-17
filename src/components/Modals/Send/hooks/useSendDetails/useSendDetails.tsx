@@ -96,7 +96,6 @@ export const useSendDetails = (): UseSendDetailsReturnType => {
       .toFixed(0)
 
     switch (values.asset.chain) {
-      // TODO: Handle Cosmos ChainType here
       case ChainTypes.Ethereum: {
         const from = await adapter.getAddress({
           wallet
@@ -192,7 +191,6 @@ export const useSendDetails = (): UseSendDetailsReturnType => {
       let fastFee: string = ''
       let adapterFees
       switch (chain) {
-        // TODO: Handle Cosmos ChainType here
         case ChainTypes.Ethereum: {
           const ethAdapter = chainAdapterManager.byChain(ChainTypes.Ethereum)
           const contractAddress = tokenId

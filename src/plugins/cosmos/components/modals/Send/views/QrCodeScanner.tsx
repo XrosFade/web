@@ -3,11 +3,10 @@ import { lazy, Suspense } from 'react'
 import { useFormContext } from 'react-hook-form'
 import { useTranslate } from 'react-polyglot'
 import { useHistory } from 'react-router-dom'
+import { SendFormFields, SendInput } from 'components/Modals/Send/Form'
+import { SendRoutes } from 'components/Modals/Send/Send'
 import { SlideTransition } from 'components/SlideTransition'
 import { Text } from 'components/Text'
-
-import { SendFormFields, SendInput } from 'components/Modals/Send/Form'
-import { SendRoutes } from '../Send'
 
 const QrReader = lazy(() => import('react-qr-reader'))
 
